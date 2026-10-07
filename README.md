@@ -34,6 +34,6 @@ Paper in -> briefing out, no human step:
 cp .env.example .env            # fill in the keys (MONID_API_KEY for the prior-work search)
 python3 -m pytest agent -q      # 70 tests
 python3 -m agent.run data/family-025 "Family 025: Short Egyptian fractions" agent37   # or: openai
-cd web && python3 -m http.server 8765 --bind 127.0.0.1   # then open http://127.0.0.1:8765
+python3 -m agent.server         # then open http://127.0.0.1:8765 (summary card, review copilot, chat)
 ```
 See `docs/SUBMISSION.md` for the pitch and `docs/RESEARCH.md` for the research behind it.

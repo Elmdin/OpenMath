@@ -11,6 +11,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from agent.agent37 import Agent37, Agent37Error, load_env
+from agent import publish
 from agent.card import build_card
 from agent.run import EXAMPLE
 
@@ -99,6 +100,16 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def do_GET(self):
+        if self.path != "/api/feed":
+            return super().do_GET()
+        try:
+            rows = publish.latest(8)
+        except (RuntimeError, ValueError) as error:
+            print(f"feed failed: {error}", file=sys.stderr)
+            return self._send(502, {"success": False, "data": None, "error": "the feed is not reachable"})
+        return self._send(200, {"success": True, "data": rows, "error": None, "meta": {"limit": 8}})
 
     def do_POST(self):
         if self.path != "/api/ask":
