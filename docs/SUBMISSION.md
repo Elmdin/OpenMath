@@ -40,7 +40,7 @@ One paper takes about a minute. Buyers: labs publishing machine-proved results, 
 receiving them, and audit projects doing this by hand. Not yet validated with a customer.
 
 **Demo video URL**
-______
+https://drive.google.com/file/d/1Heyey2PuSMREzx5KD7WMdONOz1z_djNZ/view?usp=sharing
 
 **Live project, GitHub, or additional Drive links**
 https://github.com/Elmdin/OpenMath

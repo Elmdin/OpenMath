@@ -5,6 +5,9 @@ Built at the "Build an Agent" Hackathon, Corgi Cafe, San Francisco, Oct 7, 2026.
 
 **Status: working on one paper (Family 025). One command runs the audit on Agent37, scores it, searches prior work through Monid, and publishes the card to Supabase.**
 
+**Demo video:** https://drive.google.com/file/d/1Heyey2PuSMREzx5KD7WMdONOz1z_djNZ/view?usp=sharing
+**Live pages:** https://elmdin.github.io/OpenMath/ (chat and experiments need the local server)
+
 ## What it does (target)
 Paper in -> briefing out, no human step:
 1. Claim in plain words.
