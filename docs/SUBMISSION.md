@@ -24,12 +24,16 @@ Given a paper's LaTeX and its Lean statement, the agent:
    flag whose quotes are not verbatim in the sources.
 3. Recomputes the worked example and searches 19,900 small cases in exact arithmetic.
 4. Searches for prior work and marks which results the paper does not cite.
+   It also writes a reviewer's note for each of the 19 results: what the step does and what to
+   check, each point quoting the proof (44 grounded points; 8 dropped for misquoting).
 5. Scores itself by planting known defects in the statement and counting what it catches
-   (latest run: 4 of 4 defects caught, 3 of 3 controls left alone; a seven-case smoke test).
-6. Publishes a review card where every panel is labelled with what backs it.
+   (latest runs: 4 of 4 defects caught, 3 of 3 controls left alone; a seven-case smoke test,
+   and results vary between runs).
+6. Publishes a summary card and a review copilot: a guided path through the proof with the
+   agent's notes, an interactive picture of the theorem, and progress ticks beside each step.
 
 The reviewer keeps the judgement: the card shows what was checked, by what, and what is left.
-One paper takes about 30 seconds. Buyers: labs publishing machine-proved results, journals
+One paper takes about a minute. Buyers: labs publishing machine-proved results, journals
 receiving them, and audit projects doing this by hand. Not yet validated with a customer.
 
 **Demo video URL**
@@ -40,9 +44,9 @@ https://github.com/Elmdin/OpenMath
 
 **Describe your Agent37 Cloud API integration and any OpenAI, Supabase, InstaCloud, or Monid integrations**
 - Agent37 Cloud API: the worker. We create a hosted Hermes instance through
-  `POST /v1/instances`, wait on `/v1/health`, and run every audit turn (seven per paper,
-  including the self-evaluation) through `POST /v1/responses` on the instance. Code:
-  `agent/agent37.py`. A full run completes in about 30 seconds.
+  `POST /v1/instances`, wait on `/v1/health`, and run every audit turn (26 per paper:
+  7 for the audit and its self-evaluation, 19 for the per-result reviewer's notes) through `POST /v1/responses` on the instance. Code:
+  `agent/agent37.py`. A full run completes in about a minute.
 - Supabase: every finished card, with its audit, self-evaluation and prior-work results, is
   inserted into a `papers` table through the REST API. Code: `agent/publish.py`, `supabase/schema.sql`.
 - Monid: prior-work search. The agent calls Monid's `/v1/run` (routed to Exa) with a query

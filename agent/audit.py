@@ -63,11 +63,30 @@ def _squash(text):
     return re.sub(r"\s+", " ", text).strip()
 
 
-def _parse(raw):
+def _quotable(text):
+    """Squash whitespace and drop inline-math delimiters, which models omit when quoting LaTeX."""
+    return _squash(re.sub(r"\$|\\[()]", "", text))
+
+
+# A backslash that is not a JSON escape the model plausibly meant: \", \\, \uXXXX, or \n not starting a LaTeX command.
+_LATEX_BACKSLASH = re.compile(r'\\(?!["\\]|u[0-9a-fA-F]{4}|n(?![a-zA-Z]))')
+
+
+def _loads(raw):
+    """Models copy LaTeX into JSON without doubling backslashes; repair that only if the reply is invalid as written."""
     try:
-        data = json.loads(raw)
-    except (TypeError, json.JSONDecodeError) as error:
+        return json.loads(raw)
+    except TypeError as error:
         raise ValueError(f"model did not return JSON: {error}") from error
+    except json.JSONDecodeError:
+        try:
+            return json.loads(_LATEX_BACKSLASH.sub(r"\\\\", raw))
+        except json.JSONDecodeError as error:
+            raise ValueError(f"model did not return JSON: {error}") from error
+
+
+def _parse(raw):
+    data = _loads(raw)
     if not isinstance(data, dict) or not isinstance(data.get("flags"), list):
         raise ValueError("model output must be an object with a 'flags' list")
     for item in data["flags"]:
@@ -79,10 +98,10 @@ def _parse(raw):
 
 def audit(claim, lean, model):
     """Return {"flags": [...], "rejected": [...]}; rejected flags quote text that is not there."""
-    claim_text, lean_text = _squash(claim), _squash(lean)
+    claim_text, lean_text = _quotable(claim), _squash(lean)
     flags, rejected = [], []
     for item in _parse(model(build_prompt(claim, lean))):
-        grounded = _squash(item["paper_quote"]) in claim_text and _squash(item["lean_quote"]) in lean_text
+        grounded = _quotable(item["paper_quote"]) in claim_text and _squash(item["lean_quote"]) in lean_text
         (flags if grounded else rejected).append(dict(item))
     return {"flags": flags, "rejected": rejected}
 
