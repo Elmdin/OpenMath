@@ -61,7 +61,7 @@
   a { color:var(--spine); }
 </style>
 <script>
-  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] } };
+  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], macros: { N: '\\mathbb N', Z: '\\mathbb Z', R: '\\mathbb R', E: '\\mathbb E', Prob: '\\mathbb P', e: '\\mathrm e' } }, options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] } };
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
@@ -75,6 +75,8 @@
       Before trusting it, a reviewer still has to answer these questions by hand. Our agent answered them in <span id="secs">seconds</span>.</p>
     <div class="tiles" id="tiles"></div>
     <p class="note">Still yours to judge: is the result new, and does it matter. The agent gives no verdict on the paper.</p>
+    <p style="margin:14px 0 0"><a href="reader.html" style="font-weight:600">Read the paper with the copilot →</a>
+      <span class="note" style="margin-left:6px">a side panel follows the result you are on</span></p>
   </section>
   <p class="sub" style="margin:22px 0 10px">The evidence behind each answer (click to open):</p>
 
