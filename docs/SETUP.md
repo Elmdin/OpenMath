@@ -4,7 +4,9 @@
 - [ ] Agent37: sign up, create an API key (`sk_live_...`). Ask at kickoff for hackathon credits.
 - [ ] Create one Agent37 instance now and wait for health; cold start is the main demo risk.
 - [ ] OpenAI: API key with credit. Ask the OpenAI people at kickoff about hackathon credits.
-- [ ] Supabase: new project, run `supabase/schema.sql`, copy the URL and anon key.
+- [x] Supabase: project `wimaan3's Project` (org `hacks`), URL https://iiamjfypgnrdbhncpnvg.supabase.co.
+      `supabase/schema.sql` was run on 7 Oct; table `public.papers` exists with anon read + insert.
+      Still to do: copy the publishable key (Settings -> API Keys) into `.env` as SUPABASE_ANON_KEY.
 - [x] GitHub: repo `Elmdin/OpenMath` (created; currently private, make it public before submitting if the rules need a public repo). Do not push anything from naturefind (private).
 - [ ] `cp .env.example .env` and fill it in.
 
