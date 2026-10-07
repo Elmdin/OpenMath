@@ -41,6 +41,8 @@ def test_hits_are_tagged_against_the_bibliography():
     assert out["hits"][0]["year"] == "1980" and out["hits"][2]["title"] == "(untitled)"
     body, key = transport.calls[0]
     assert key == "k" and body["provider"] == "exa" and body["input"]["numResults"] == 3
+    assert body["input"]["contents"] == {"text": {"maxCharacters": 900}}
+    assert out["hits"][0]["excerpt"] is None
 
 
 def test_incomplete_run_raises():
@@ -70,3 +72,12 @@ def test_assess_rejects_non_json():
     prior = {"query": "q", "hits": [{"title": "B", "cited_by_paper": False}]}
     with pytest.raises(RuntimeError):
         assess(prior, lambda prompt: "nope")
+
+
+def test_assess_shows_the_model_each_excerpt():
+    prior = {"query": "q", "hits": [{"title": "B", "cited_by_paper": False, "excerpt": "We bound the length of expansions."},
+                                    {"title": "C", "cited_by_paper": False, "excerpt": None}]}
+    seen = []
+    out = assess(prior, lambda prompt: seen.append(prompt) or json.dumps({"items": []}))
+    assert "excerpt: We bound the length of expansions." in seen[0] and "(no excerpt)" in seen[0]
+    assert out["read_excerpts"] == 1
