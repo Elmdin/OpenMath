@@ -45,6 +45,7 @@
   .tile .q { color:var(--muted); font-size:.9rem; }
   .tile .a { font-size:1.35rem; font-weight:650; margin:4px 0 2px; }
   .tile .d { font-size:.9rem; }
+  .tile .pain { margin-top:4px; font-size:.8rem; color:var(--muted); }
   .tile .src { margin-top:8px; font-size:.68rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--spine); }
   details > summary { cursor:pointer; list-style:none; }
   details > summary::-webkit-details-marker { display:none; }
@@ -78,7 +79,7 @@
     <p class="note">Still yours to judge: is the result new, and does it matter. The agent gives no verdict on the paper.</p>
     <p class="note" id="saved"></p>
     <p style="margin:14px 0 0"><a href="reader.html" style="font-weight:600">Review the paper with the copilot →</a>
-      <span class="note" style="margin-left:6px">a guided path through the proof, with notes and visuals beside each step</span></p>
+      <span class="note" style="margin-left:6px">one step at a time, with pictures, a chat, and code the agent runs for you</span></p>
   </section>
   <p class="sub" style="margin:22px 0 10px">The evidence behind each answer (click to open):</p>
 
@@ -146,7 +147,8 @@
   const card = window.CARD;
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  const typeset = (node) => { if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([node]).catch(() => {}); };
+  let mjQueue = Promise.resolve();
+  const typeset = (node) => { mjQueue = mjQueue.then(() => (window.MathJax && MathJax.typesetPromise) ? MathJax.typesetPromise([node]) : null).catch(() => {}); };
   if (!card) { document.querySelector('main').textContent = 'card.js is missing. Run: python -m agent.card data/family-025 web/card.js'; return; }
 
   $('paper').textContent = card.paper;
@@ -232,21 +234,21 @@
   const tiles = [
     { to: 'audit-section', q: 'Does the computer-checked statement say the same thing as the paper?',
       a: au ? (mism === 0 ? 'No mismatches found' : mism + ' mismatch' + (mism > 1 ? 'es' : '') + ' flagged') : 'Not checked yet',
-      d: au ? 'We planted ' + au.total + ' errors to test the agent: it caught ' + au.caught + '.' : 'Run the audit to fill this in.', src: 'Agent37 hosted agent' },
+      d: au ? 'We planted ' + au.total + ' errors to test the agent: it caught ' + au.caught + '.' : 'Run the audit to fill this in.', src: 'Agent37 hosted agent', pain: 'A proof checker certifies the formal statement, not that it matches what the paper means (Tao).' },
     { to: 'map-section', q: 'How much of the paper do I need to read?',
       a: card.spine.length + ' of ' + nodes.size + ' results',
-      d: 'The other ' + (nodes.size - card.spine.length) + ' only support side results.', src: 'Parsed in code, no model' },
+      d: 'The other ' + (nodes.size - card.spine.length) + ' only support side results.', src: 'Parsed in code, no model', pain: 'Reviewers are “drinking from a firehose”; Tao has asked for dependency graphs made from papers.' },
     { to: 'prior-section', q: 'Did it miss earlier work?',
       a: uncited == null ? 'Not searched yet' : uncited + ' of ' + window.PRIOR.hits.length + ' related papers not cited',
-      d: 'Worth a look. They may or may not matter.', src: 'Monid search (Exa)' },
+      d: 'Worth a look. They may or may not matter.', src: 'Monid search (Exa)', pain: 'Results are released too fast to cite earlier work; authors report being left out.' },
     { to: 'cases-section', q: 'Does the claim hold up on real numbers?',
       a: ex.cases.toLocaleString() + ' cases checked',
-      d: 'Exact arithmetic. None needs more than ' + ex.firsts[ex.firsts.length - 1].worst + ' terms, as the theorem predicts.', src: 'Computed in code, no model' },
+      d: 'Exact arithmetic. None needs more than ' + ex.firsts[ex.firsts.length - 1].worst + ' terms, as the theorem predicts.', src: 'Computed in code, no model', pain: 'Statements need “unit tests”; checking small cases by hand takes days.' },
   ];
   for (const t of tiles) {
     const b = el('button', 'tile');
     b.append(el('div', 'q', t.q), el('div', 'a', t.a), el('div', 'd', t.d));
-    b.append(el('div', 'src', t.src));
+    b.append(el('div', 'src', t.src), el('div', 'pain', 'Why: ' + t.pain));
     b.onclick = () => { const s = $(t.to); const d = s && s.querySelector('details'); if (d) { d.open = true; s.scrollIntoView({ behavior: 'smooth' }); } };
     $('tiles').append(b);
   }
