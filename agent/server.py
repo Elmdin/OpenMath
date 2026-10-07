@@ -5,6 +5,7 @@
 Binds to 127.0.0.1 only. The API key stays on this machine; the browser never sees it.
 """
 import json
+import re
 import sys
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -93,6 +94,58 @@ Proof:
 
 {question}"""
 
+DRAW_PROMPT = """You are making a NEW picture to help a mathematician understand one step of a paper. Compute
+real data and draw it; do not sketch from memory.
+
+Write a Python 3 script (standard library only, exact arithmetic where it matters, under 20
+seconds) that computes data illustrating the statement below and prints one complete standalone
+SVG. Then RUN it in your sandbox with your code-execution tool and reply with what it printed.
+
+Rules for the SVG: viewBox="0 0 640 380"; first element a white background rect; dark text
+(#222), font-size 12 or more, a title, labelled axes or a legend; at most 14 KB; no scripts, no
+event attributes, no foreignObject, no images, no links or external references. If the data is
+naturally three-dimensional (for example a value for every pair (a, b)), draw it in 3D as an
+isometric projection with depth-sorted bars or a surface; otherwise draw in 2D.
+
+Reply in exactly this layout and nothing else:
+CAPTION: one or two plain sentences on what the picture shows and what to notice.
+SVG:
+<svg ...> ... </svg>
+
+If you could not actually run code, reply only: FAILED: <reason>.
+{request}
+
+Paper: {paper}
+{kind} {label}{title}
+
+Statement:
+{statement}
+
+Proof (for the definitions it uses):
+{proof}"""
+
+MAX_SVG = 60_000
+_SVG = re.compile(r"<svg\b.*?</svg>", re.DOTALL | re.IGNORECASE)
+_UNSAFE_SVG = re.compile(r"<\s*(script|foreignObject|image|iframe|a|use|style)\b|\bon[a-z]+\s*=|javascript:|href\s*=|url\s*\(|<!ENTITY|<\?xml-stylesheet",
+                         re.IGNORECASE)
+
+
+def parse_drawing(raw):
+    """Pull the SVG out of the agent's reply and refuse anything that is not plain drawing markup."""
+    match = _SVG.search(raw)
+    if not match:
+        raise ValueError("no SVG in the reply: " + raw.strip()[:160])
+    drawing = match.group(0)
+    if len(drawing) > MAX_SVG:
+        raise ValueError("the drawing is too large")
+    if _UNSAFE_SVG.search(drawing):
+        raise ValueError("the drawing contains markup we do not render")
+    if 'xmlns="http://www.w3.org/2000/svg"' not in drawing:
+        drawing = drawing.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"', 1)
+    caption = re.search(r"CAPTION:\s*(.+?)(?:\n\s*SVG:|<svg)", raw, re.DOTALL)
+    return {"svg": drawing, "caption": (caption.group(1).strip() if caption else "")[:500]}
+
+
 PICTURES = ("shortest", "greedy", "none")
 
 
@@ -125,13 +178,13 @@ def build_prompt(card, label, question, mode="ask"):
     proof = node["proof"] or "(no proof text)"
     if len(proof) > MAX_PROOF_CHARS:
         proof = proof[:MAX_PROOF_CHARS] + "\n[proof truncated]"
-    if mode not in ("ask", "test", "show"):
+    if mode not in ("ask", "test", "show", "draw"):
         raise ValueError("unknown mode")
-    template = {"ask": PROMPT, "test": TEST_PROMPT, "show": SHOW_PROMPT}[mode]
+    template = {"ask": PROMPT, "test": TEST_PROMPT, "show": SHOW_PROMPT, "draw": DRAW_PROMPT}[mode]
     return template.format(paper=card["paper"], section=node["section"] or "(none)", kind=node["kind"].capitalize(),
                          label=label, title=f" ({node['title']})" if node["title"] else "",
                          deps=", ".join(node["deps"]) or "nothing else", statement=node["statement"],
-                         proof=proof, question=question.strip())
+                         proof=proof, question=question.strip(), request="Request: " + question.strip())
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -185,6 +238,12 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError as error:
                 print(f"bad picture spec: {error}", file=sys.stderr)
                 return self._send(502, {"success": False, "data": None, "error": "the agent chose a picture we cannot draw; try again"})
+        if mode == "draw":
+            try:
+                data = {**data, "drawing": parse_drawing(answer), "answer": ""}
+            except ValueError as error:
+                print(f"bad drawing: {error}", file=sys.stderr)
+                return self._send(502, {"success": False, "data": None, "error": "the agent did not return a usable drawing; try again"})
         return self._send(200, {"success": True, "data": data, "error": None})
 
 
