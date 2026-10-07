@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from agent.card import build_card
-from agent.server import MAX_QUESTION, build_prompt, parse_spec
+from agent.server import MAX_QUESTION, build_prompt, parse_drawing, parse_spec
 
 CARD = build_card(Path(__file__).resolve().parents[2] / "data" / "family-025", "thm:main",
                   {"a": 5, "b": 181, "denominators": [39, 507, 91767]})
@@ -57,3 +57,22 @@ def test_bad_picture_specs_are_rejected(raw):
 def test_show_mode_lists_the_picture_library():
     prompt = build_prompt(CARD, "lem:greedy", "Show me.", mode="show")
     assert '"shortest"' in prompt and '"greedy"' in prompt and '"none"' in prompt
+
+
+def test_drawing_is_extracted_with_caption():
+    out = parse_drawing('CAPTION: Bars grow slowly.\nSVG:\n<svg viewBox="0 0 640 380"><rect width="640" height="380" fill="#fff"/></svg>\nthanks')
+    assert out["caption"] == "Bars grow slowly."
+    assert out["svg"].startswith('<svg xmlns="http://www.w3.org/2000/svg"') and out["svg"].endswith("</svg>")
+
+
+@pytest.mark.parametrize("raw", ["FAILED: no sandbox", "<svg><script>alert(1)</script></svg>", '<svg onload="x()"></svg>',
+                                 '<svg><image href="http://x/y.png"/></svg>', '<svg><a href="javascript:x">t</a></svg>',
+                                 "<svg>" + "x" * 70_000 + "</svg>"])
+def test_unsafe_or_missing_drawings_are_rejected(raw):
+    with pytest.raises(ValueError):
+        parse_drawing(raw)
+
+
+def test_draw_mode_asks_for_computed_svg_and_allows_3d():
+    prompt = build_prompt(CARD, "thm:main", "Draw the number of terms for every a/b.", mode="draw")
+    assert "isometric projection" in prompt and "Request: Draw the number of terms" in prompt
