@@ -3,7 +3,7 @@
 An agent that turns an AI-generated math paper into a playable picture, unattended.
 Built at the "Build an Agent" Hackathon, Corgi Cafe, San Francisco, Oct 7, 2026.
 
-**Status: working on one paper (Family 025). One command runs the audit on Agent37, scores it, and publishes the card to Supabase.**
+**Status: working on one paper (Family 025). One command runs the audit on Agent37, scores it, searches prior work through Monid, and publishes the card to Supabase.**
 
 ## What it does (target)
 Paper in -> briefing out, no human step:
@@ -31,7 +31,7 @@ Paper in -> briefing out, no human step:
 
 ## Run it
 ```
-cp .env.example .env            # fill in the keys
+cp .env.example .env            # fill in the keys (MONID_API_KEY for the prior-work search)
 python3 -m pytest agent -q      # 70 tests
 python3 -m agent.run data/family-025 "Family 025: Short Egyptian fractions" agent37   # or: openai
 cd web && python3 -m http.server 8765 --bind 127.0.0.1   # then open http://127.0.0.1:8765
