@@ -52,7 +52,7 @@ Mathematics is the first demonstration; the same shape fits any field where agen
 papers faster than people can read them. No customer has been asked yet.
 
 ## Ask at kickoff
-- Judging criteria: ______
+- Judging criteria: originality, business use case, working prototype, user experience (as relayed during the build)
 - Team size, solo entry allowed: ______
 - Prior work / pre-written code allowed: ______
 - How the $100 OpenAI credits are delivered: ______
