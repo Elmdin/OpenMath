@@ -10,7 +10,7 @@ from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from agent.agent37 import Agent37, Agent37Error, load_env
+from agent.agent37 import Agent37, Agent37Error, extract_json, load_env
 from agent import publish
 from agent.card import build_card
 from agent.run import EXAMPLE
@@ -67,6 +67,49 @@ Proof (for the definitions it uses):
 {question}"""
 
 
+SHOW_PROMPT = """You are choosing a picture to help a mathematician understand one step of a paper about
+Egyptian fractions (writing a/b as a sum of distinct unit fractions). You cannot draw. You pick
+one picture from this library and its inputs, and the page draws it exactly:
+
+- "shortest": a glass filled to a/b using the fewest distinct unit-fraction cups.
+- "greedy": the greedy procedure on a/b, one bar per step, showing denominators exploding.
+- "none": no picture in the library fits this step.
+
+Choose the fraction a/b (integers, 1 <= a < b <= 200) that best illustrates THIS step, not a
+generic one. Reply with JSON only:
+{{"picture": "shortest" | "greedy" | "none", "a": <int>, "b": <int>, "caption": "<one or two plain sentences: what to notice, and how it relates to this step>"}}
+For "none", set a and b to 1 and 2 and use the caption to say why no picture fits.
+
+Paper: {paper}
+{kind} {label}{title}
+
+Statement:
+{statement}
+
+Proof:
+{proof}
+
+{question}"""
+
+PICTURES = ("shortest", "greedy", "none")
+
+
+def parse_spec(raw):
+    """Validate the agent's picture choice; the page only ever draws from this fixed library."""
+    try:
+        spec = json.loads(extract_json(raw))
+    except (Agent37Error, json.JSONDecodeError) as error:
+        raise ValueError(f"picture spec is not JSON: {error}") from error
+    picture, a, b, caption = spec.get("picture"), spec.get("a"), spec.get("b"), spec.get("caption")
+    if picture not in PICTURES:
+        raise ValueError("unknown picture")
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in (a, b)) or not 1 <= a < b <= 200:
+        raise ValueError("need integers with 1 <= a < b <= 200")
+    if not isinstance(caption, str) or not caption.strip():
+        raise ValueError("missing caption")
+    return {"picture": picture, "a": a, "b": b, "caption": caption.strip()[:400]}
+
+
 def build_prompt(card, label, question, mode="ask"):
     """Validate the request and build the tutor prompt; raises ValueError with a user-facing message."""
     nodes = {node["label"]: node for node in card["map"]["nodes"]}
@@ -80,9 +123,9 @@ def build_prompt(card, label, question, mode="ask"):
     proof = node["proof"] or "(no proof text)"
     if len(proof) > MAX_PROOF_CHARS:
         proof = proof[:MAX_PROOF_CHARS] + "\n[proof truncated]"
-    if mode not in ("ask", "test"):
+    if mode not in ("ask", "test", "show"):
         raise ValueError("unknown mode")
-    template = TEST_PROMPT if mode == "test" else PROMPT
+    template = {"ask": PROMPT, "test": TEST_PROMPT, "show": SHOW_PROMPT}[mode]
     return template.format(paper=card["paper"], section=node["section"] or "(none)", kind=node["kind"].capitalize(),
                          label=label, title=f" ({node['title']})" if node["title"] else "",
                          deps=", ".join(node["deps"]) or "nothing else", statement=node["statement"],
@@ -133,7 +176,14 @@ class Handler(SimpleHTTPRequestHandler):
         except Agent37Error as error:
             print(f"ask failed: {error}", file=sys.stderr)
             return self._send(502, {"success": False, "data": None, "error": "the agent did not answer; try again"})
-        return self._send(200, {"success": True, "data": {"answer": answer, "provider": "agent37", "mode": mode}, "error": None})
+        data = {"answer": answer, "provider": "agent37", "mode": mode}
+        if mode == "show":
+            try:
+                data = {**data, "spec": parse_spec(answer)}
+            except ValueError as error:
+                print(f"bad picture spec: {error}", file=sys.stderr)
+                return self._send(502, {"success": False, "data": None, "error": "the agent chose a picture we cannot draw; try again"})
+        return self._send(200, {"success": True, "data": data, "error": None})
 
 
 def make_ask(env):
