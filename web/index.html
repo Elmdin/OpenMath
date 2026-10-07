@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenMath review card</title>
+<style>
+  :root { --bg:#fbfaf7; --ink:#1c1b19; --muted:#6b675f; --line:#dedad0; --card:#fff;
+          --ok:#1f7a4d; --warn:#9a6200; --bad:#a3312b; --spine:#1d4f91; --spine-bg:#e8f0fb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161513; --ink:#ece9e2; --muted:#9d988d; --line:#34322d; --card:#1f1e1b;
+            --ok:#5fc48f; --warn:#e0a94a; --bad:#ef7f77; --spine:#8fb8f2; --spine-bg:#1e2c40; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, sans-serif; }
+  main { max-width:1000px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-size:1.5rem; margin:0 0 4px; }
+  h2 { font-size:1rem; margin:0 0 10px; }
+  .sub { color:var(--muted); margin:0 0 20px; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin-bottom:16px; }
+  .rung { display:inline-block; font-size:.72rem; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+          padding:2px 8px; border-radius:99px; border:1px solid currentColor; margin-left:8px; vertical-align:middle; }
+  .r-ok { color:var(--ok); } .r-warn { color:var(--warn); } .r-bad { color:var(--bad); }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:720px) { .cols { grid-template-columns:1fr; } }
+  pre { margin:0; padding:12px; background:var(--bg); border:1px solid var(--line); border-radius:8px;
+        overflow-x:auto; font:13px/1.45 ui-monospace, Menlo, monospace; white-space:pre-wrap; }
+  .label { color:var(--muted); font-size:.8rem; margin-bottom:6px; }
+  .note { color:var(--muted); font-size:.9rem; margin:10px 0 0; }
+  .level { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:8px 0; border-top:1px dashed var(--line); }
+  .level:first-child { border-top:0; }
+  .depth { width:64px; color:var(--muted); font-size:.8rem; flex:none; }
+  button.node { font:13px ui-monospace, Menlo, monospace; padding:4px 10px; border-radius:6px; cursor:pointer;
+                border:1px solid var(--spine); background:var(--spine-bg); color:var(--spine); }
+  button.node.off { border-color:var(--line); background:transparent; color:var(--muted); }
+  button.node.sel { outline:2px solid var(--spine); outline-offset:1px; }
+  select { font:inherit; padding:2px 6px; }
+  #detail { margin-top:12px; }
+  .sum { font-variant-numeric:tabular-nums; font-size:1.1rem; }
+  .flag { border-left:3px solid var(--warn); padding:6px 0 6px 12px; margin:10px 0; }
+  .flag.mismatch { border-left-color:var(--bad); }
+  .flag .q { color:var(--muted); font:12.5px/1.45 ui-monospace, Menlo, monospace; white-space:pre-wrap; margin-top:4px; }
+  .yes { color:var(--ok); } .no { color:var(--bad); }
+  table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:6px 10px 6px 0; border-top:1px solid var(--line); font-size:.92rem; }
+  th { color:var(--muted); font-weight:500; border-top:0; }
+</style>
+<script>
+  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] } };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+<main>
+  <h1>Review card: <span id="paper"></span></h1>
+  <p class="sub">Every panel is tagged with what backs it. Only the audit panel contains model-written text, and it is marked.</p>
+
+  <section>
+    <h2>At a glance</h2>
+    <ul id="glance" style="margin:0; padding-left:20px"></ul>
+    <p class="note">The card gives no verdict on the paper. It shows what was checked, by what, and what is left for you.</p>
+  </section>
+
+  <section>
+    <h2>Formal status <span id="status-rung" class="rung"></span></h2>
+    <div id="status"></div>
+  </section>
+
+  <section>
+    <h2>Statement versus claim <span class="rung r-warn">human check needed</span></h2>
+    <div class="cols">
+      <div><div class="label">Paper, main theorem</div><div id="claim"></div></div>
+      <div><div class="label">Lean statement, <span id="lean-file"></span></div><pre id="lean"></pre></div>
+    </div>
+    <p class="note">A proof checker confirms the right-hand side. Whether it says the same thing as the left-hand side is for a reader to judge.</p>
+  </section>
+
+  <section id="audit-section" hidden>
+    <h2>Statement audit <span class="rung r-warn">model-written, quotes verified</span></h2>
+    <p class="sub" style="margin-bottom:10px" id="audit-sum"></p>
+    <div id="audit-flags"></div>
+    <h2 style="margin-top:18px">How far to trust the auditor <span class="rung r-ok">measured</span></h2>
+    <p class="sub" style="margin-bottom:10px" id="eval-sum"></p>
+    <table id="eval"><thead><tr><th>seeded change to the Lean statement</th><th>kind</th><th>auditor raised a mismatch</th><th>verdict</th></tr></thead><tbody></tbody></table>
+    <p class="note">The model proposes flags; code keeps a flag only if both quotes occur verbatim in the paper and the Lean source. A flag is a prompt for a reader, not a finding.</p>
+  </section>
+
+  <section>
+    <h2>Worked example <span id="check-rung" class="rung"></span></h2>
+    <div id="check" class="sum"></div>
+    <p class="note">Recomputed here in exact rational arithmetic: distinct denominators, each at least 2, summing to the target.</p>
+  </section>
+
+  <section>
+    <h2>Small cases <span class="rung r-ok">recomputed: exhaustive search</span></h2>
+    <p class="sub" style="margin-bottom:10px" id="explore-sum"></p>
+    <table id="explore"><thead><tr><th>cups needed</th><th>first b that needs them</th><th>hardest fraction there</th><th>log log b</th></tr></thead><tbody></tbody></table>
+    <p class="note">This is the quantity the theorem bounds, computed exactly for small b. It illustrates the claim and does not test it: the theorem only speaks about b beyond an unstated threshold.</p>
+  </section>
+
+  <section>
+    <h2>Proof map <span class="rung r-ok">parsed from source</span></h2>
+    <p class="sub" style="margin-bottom:10px">
+      What does <select id="root"></select> actually depend on?
+      <span id="spine-count"></span>
+    </p>
+    <div id="levels"></div>
+    <div id="detail"></div>
+    <p class="note">Edges come from the paper's own cross-references. A result used without being cited by label would not appear.</p>
+  </section>
+</main>
+<script src="card.js"></script>
+<script src="audit.js"></script>
+<script>
+(function () {
+  const card = window.CARD;
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const typeset = (node) => { if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([node]).catch(() => {}); };
+  if (!card) { document.querySelector('main').textContent = 'card.js is missing. Run: python -m agent.card data/family-025 web/card.js'; return; }
+
+  $('paper').textContent = card.paper;
+  const nodes = new Map(card.map.nodes.map((n) => [n.label, n]));
+
+  // Formal status
+  const f = card.formal;
+  if (f) {
+    $('status-rung').textContent = f.rebuilt_here ? 'kernel-checked here' : 'claimed by source, not rebuilt here';
+    $('status-rung').classList.add(f.rebuilt_here ? 'r-ok' : 'r-warn');
+    $('status').append(
+      el('div', null, 'Proof module named by the source: ' + f.solution_module),
+      el('div', null, 'Axioms the source permits: ' + f.permitted_axioms.join(', ')));
+    $('lean-file').textContent = f.file;
+    $('lean').textContent = f.theorem;
+  } else {
+    $('status-rung').textContent = 'no formal statement';
+    $('status-rung').classList.add('r-bad');
+    $('lean').textContent = '(none published)';
+  }
+  $('claim').textContent = nodes.get(card.root).statement;
+  typeset($('claim'));
+
+  // Worked example
+  const c = card.check;
+  $('check-rung').textContent = c.ok ? 'recomputed: pass' : 'recomputed: fail';
+  $('check-rung').classList.add(c.ok ? 'r-ok' : 'r-bad');
+  $('check').textContent = c.a + '/' + c.b + ' = ' + c.denominators.map((n) => '1/' + n).join(' + ') + (c.ok ? '' : '   ✗ ' + c.failures.join('; '));
+
+  // Statement audit (present only after agent.run_audit has been run)
+  const au = window.AUDIT;
+  if (au) {
+    $('audit-section').hidden = false;
+    const mism = au.original.flags.filter((f) => f.severity === 'mismatch').length;
+    $('audit-sum').textContent = au.provider + ' ' + au.model + ' compared the two statements above: ' + mism + ' mismatches, ' +
+      (au.original.flags.length - mism) + ' notes for a reader, ' + au.original.rejected.length + ' flags discarded for quoting text that is not there.';
+    for (const f of au.original.flags) {
+      const d = el('div', 'flag ' + f.severity);
+      d.append(el('div', null, (f.severity === 'mismatch' ? 'Mismatch: ' : 'Note: ') + f.summary), el('div', 'q', 'Lean: ' + f.lean_quote));
+      $('audit-flags').append(d);
+    }
+    $('eval-sum').textContent = 'We altered the Lean statement in known ways and re-ran the audit. Real defects caught: ' + au.caught + ' of ' + au.total +
+      '. Controls left alone: ' + au.controls_clean + ' of ' + au.controls + '.';
+    const rows = [{ description: 'none (the published statement)', is_defect: false, caught: au.false_flag_on_original }].concat(au.results);
+    for (const r of rows) {
+      const good = r.is_defect === r.caught;
+      const tr = el('tr');
+      tr.append(el('td', null, r.description), el('td', null, r.is_defect ? 'defect' : 'control'), el('td', null, r.caught ? 'yes' : 'no'),
+        el('td', good ? 'yes' : 'no', good ? 'correct' : (r.is_defect ? 'missed' : 'false alarm')));
+      $('eval').tBodies[0].append(tr);
+    }
+  }
+
+  // Small cases
+  const ex = card.explore;
+  $('explore-sum').textContent = 'Shortest expansion found for all ' + ex.cases.toLocaleString() + ' fractions a/b with b up to ' + ex.b_max + '. Worst case per b:';
+  for (const r of ex.firsts) {
+    const tr = el('tr');
+    tr.append(el('td', null, r.worst), el('td', null, r.b),
+      el('td', null, r.witness_a + '/' + r.b + ' = ' + r.expansion.map((n) => '1/' + n).join(' + ')),
+      el('td', null, r.loglog == null ? '—' : r.loglog.toFixed(2)));
+    $('explore').tBodies[0].append(tr);
+  }
+
+  // At a glance
+  const glance = [
+    f ? 'Formal proof: ' + (f.rebuilt_here ? 'compiled here.' : 'claimed by the source; not rebuilt here.') : 'No formal statement published.',
+    au ? 'Statement audit: ' + au.original.flags.filter((x) => x.severity === 'mismatch').length + ' mismatches and ' +
+      au.original.flags.filter((x) => x.severity !== 'mismatch').length + ' notes between the paper and the Lean statement (auditor caught ' +
+      au.caught + ' of ' + au.total + ' seeded defects, ' + (au.controls - au.controls_clean) + ' false alarm).' : 'Statement audit: not run yet.',
+    'Worked example: ' + (c.ok ? 'recomputed, passes.' : 'recomputed, FAILS.'),
+    'Small cases: ' + ex.cases.toLocaleString() + ' fractions searched exhaustively; none needs more than ' + ex.firsts[ex.firsts.length - 1].worst + ' terms.',
+    'Reading load: the main theorem needs ' + card.spine.length + ' of ' + nodes.size + ' results; ' + (nodes.size - card.spine.length) + ' can be skipped.',
+    'Left for you: does the formal statement capture the claim, is it new, does it matter.',
+  ];
+  for (const line of glance) $('glance').append(el('li', null, line));
+
+  // Proof map
+  const roots = card.map.nodes.filter((n) => n.kind === 'theorem' || n.kind === 'corollary');
+  for (const r of roots) { const o = el('option', null, r.label); o.value = r.label; $('root').append(o); }
+  $('root').value = card.root;
+  let selected = null;
+
+  function depths(root) {
+    const depth = new Map([[root, 0]]);
+    const queue = [root];
+    for (let i = 0; i < queue.length; i++) {
+      for (const d of nodes.get(queue[i]).deps) {
+        if (!depth.has(d)) { depth.set(d, depth.get(queue[i]) + 1); queue.push(d); }
+      }
+    }
+    return depth;
+  }
+
+  function showDetail(label) {
+    selected = label;
+    const n = nodes.get(label);
+    const box = $('detail');
+    box.replaceChildren(
+      el('div', 'label', n.kind + ' ' + n.label + (n.title ? ' — ' + n.title : '') + (n.deps.length ? '  ·  uses ' + n.deps.join(', ') : '  ·  uses nothing else')),
+      el('div', null, n.statement));
+    typeset(box);
+    document.querySelectorAll('button.node').forEach((b) => b.classList.toggle('sel', b.dataset.label === label));
+  }
+
+  function render() {
+    const depth = depths($('root').value);
+    const levels = $('levels');
+    levels.replaceChildren();
+    const max = Math.max(...depth.values());
+    const row = (title, labels, off) => {
+      const r = el('div', 'level');
+      r.append(el('span', 'depth', title));
+      for (const label of labels) {
+        const b = el('button', 'node' + (off ? ' off' : ''), label);
+        b.dataset.label = label;
+        b.onclick = () => showDetail(label);
+        r.append(b);
+      }
+      levels.append(r);
+    };
+    for (let d = 0; d <= max; d++) row(d === 0 ? 'result' : 'depth ' + d, [...depth].filter(([, v]) => v === d).map(([k]) => k));
+    const unused = card.map.nodes.map((n) => n.label).filter((l) => !depth.has(l));
+    if (unused.length) row('not needed', unused, true);
+    $('spine-count').textContent = depth.size + ' of ' + nodes.size + ' results; ' + unused.length + ' can be skipped.';
+    showDetail(selected && nodes.has(selected) ? selected : $('root').value);
+  }
+  $('root').onchange = () => { selected = null; render(); };
+  render();
+})();
+</script>
+</body>
+</html>
