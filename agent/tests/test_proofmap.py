@@ -86,3 +86,40 @@ def test_comment_after_line_break_is_stripped(tmp_path):
     text = load_tex(tmp_path)
     assert "l:a" not in text
     assert "l:b" in text
+
+
+FLOW_SAMPLE = r"""\begin{document}
+\begin{abstract}We prove things.\end{abstract}
+\section{Introduction}
+Some motivation.
+\begin{theorem}\label{t}Claim.\end{theorem}
+\section{Tools}\label{sec:tools}
+\begin{lemma}\label{l}Fact.\end{lemma}
+\begin{proof}Because \ref{t} is not needed.\end{proof}
+Bridging remark.
+\begin{proof}[Proof of Theorem~\ref{t}]By \ref{l}.\end{proof}
+\end{document}"""
+
+
+def test_nodes_carry_proof_and_section():
+    nodes = by_label(build_proof_map(FLOW_SAMPLE))
+    assert nodes["t"]["section"] == "Introduction" and nodes["l"]["section"] == "Tools"
+    assert "By \\ref{l}." in nodes["t"]["proof"]
+    assert nodes["l"]["proof"].startswith("Because")
+
+
+def test_flow_lists_every_block_in_paper_order():
+    flow = build_proof_map(FLOW_SAMPLE)["flow"]
+    kinds = [(b["type"], b.get("label") or b.get("proves") or b.get("title") or "") for b in flow]
+    assert kinds == [("prose", ""), ("section", "Introduction"), ("prose", ""), ("result", "t"),
+                     ("section", "Tools"), ("result", "l"), ("proof", "l"), ("prose", ""), ("proof", "t")]
+    assert "We prove things." in flow[0]["tex"] and flow[7]["tex"] == "Bridging remark."
+
+
+def test_family_025_flow_covers_all_results_and_sections():
+    proof_map = build_proof_map(load_tex(FAMILY_025))
+    flow = proof_map["flow"]
+    assert sum(b["type"] == "result" for b in flow) == 19
+    assert sum(b["type"] == "proof" for b in flow) == 19
+    assert sum(b["type"] == "section" for b in flow) >= 6
+    assert all(n["proof"] for n in proof_map["nodes"])
