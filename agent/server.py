@@ -7,6 +7,8 @@ Binds to 127.0.0.1 only. The API key stays on this machine; the browser never se
 import json
 import re
 import sys
+import threading
+import time
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -17,6 +19,26 @@ from agent.card import build_card
 from agent.run import EXAMPLE
 
 MAX_BODY = 8_000
+ALLOWED_ORIGINS = ("https://elmdin.github.io",)  # the static site may call this API from another origin
+
+
+class RateLimit:
+    """Sliding-window cap on agent calls, so a public link cannot run up the bill."""
+
+    def __init__(self, per_minute=10, per_client_minute=4, clock=time.monotonic):
+        self._per_minute, self._per_client, self._clock = per_minute, per_client_minute, clock
+        self._calls = []  # (time, client)
+        self._lock = threading.Lock()
+
+    def allow(self, client):
+        with self._lock:
+            now = self._clock()
+            self._calls = [(t, c) for t, c in self._calls if now - t < 60]
+            if len(self._calls) >= self._per_minute or sum(c == client for _, c in self._calls) >= self._per_client:
+                return False
+            self._calls = self._calls + [(now, client)]
+            return True
+
 MAX_QUESTION = 600
 MAX_PROOF_CHARS = 7_000
 
@@ -250,12 +272,32 @@ def build_prompt(card, label, question, mode="ask"):
 class Handler(SimpleHTTPRequestHandler):
     card = None
     ask = None  # callable prompt -> answer text
+    limit = RateLimit()
+
+    def _cors(self):
+        origin = self.headers.get("Origin")
+        if origin in ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Vary", "Origin")
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._cors()
+        self.send_header("Content-Length", "0")
+        self.end_headers()
+
+    def list_directory(self, path):  # never expose a file listing
+        self.send_error(404)
+        return None
 
     def _send(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode()
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self._cors()
         self.end_headers()
         self.wfile.write(body)
 
@@ -272,6 +314,9 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/api/ask":
             return self._send(404, {"success": False, "data": None, "error": "not found"})
+        client = self.headers.get("CF-Connecting-IP") or self.client_address[0]
+        if not self.limit.allow(client):
+            return self._send(429, {"success": False, "data": None, "error": "the copilot is busy; try again in a minute"})
         try:
             length = int(self.headers.get("Content-Length") or 0)
         except ValueError:

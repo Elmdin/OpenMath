@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from agent.card import build_card
-from agent.server import MAX_QUESTION, build_prompt, parse_check, parse_drawing, parse_spec
+from agent.server import MAX_QUESTION, RateLimit, build_prompt, parse_check, parse_drawing, parse_spec
 
 CARD = build_card(Path(__file__).resolve().parents[2] / "data" / "family-025", "thm:main",
                   {"a": 5, "b": 181, "denominators": [39, 507, 91767]})
@@ -96,3 +96,14 @@ def test_check_keeps_only_steps_quoted_from_the_proof():
 def test_bad_checks_are_rejected(raw):
     with pytest.raises(ValueError):
         parse_check(raw, "q")
+
+
+def test_rate_limit_caps_total_and_per_client_and_recovers():
+    now = [0.0]
+    limit = RateLimit(per_minute=3, per_client_minute=2, clock=lambda: now[0])
+    assert limit.allow("a") and limit.allow("a")
+    assert not limit.allow("a")          # per-client cap
+    assert limit.allow("b")
+    assert not limit.allow("c")          # global cap
+    now[0] = 61.0
+    assert limit.allow("a")              # window has passed

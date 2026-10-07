@@ -103,12 +103,15 @@
     <form id="ask"><input id="q" placeholder="Ask anything about this step…" maxlength="600" autocomplete="off"><button class="nav primary" id="send">Ask</button></form>
   </aside>
 </div>
+<script src="config.js"></script>
 <script src="card.js"></script>
 <script src="audit.js"></script>
 <script src="notes.js"></script>
 <script>
 (function () {
   const card = window.CARD, au = window.AUDIT, notes = (window.NOTES && window.NOTES.notes) || {};
+  // Same origin when a server serves this page; the configured host when it is a static site.
+  const API = /github\.io$/.test(location.hostname) ? (window.OPENMATH_API || '') : '';
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   if (!card) { $('piece').textContent = 'card.js is missing. Run the agent first.'; return; }
@@ -398,7 +401,7 @@
     renderChat();
     let reply = { who: 'bot err', text: 'The copilot is not reachable. Start it with: python -m agent.server' };
     try {
-      const res = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, question, mode: mode || 'ask' }) });
+      const res = await fetch(API + '/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, question, mode: mode || 'ask' }) });
       const data = await res.json();
       reply = data.success ? { who: 'bot', text: data.data.answer, ran: mode === 'test', spec: data.data.spec, drawing: data.data.drawing, review: data.data.review } : { who: 'bot err', text: data.error || 'Something went wrong.' };
     } catch (e) { /* keep the unreachable message */ }
