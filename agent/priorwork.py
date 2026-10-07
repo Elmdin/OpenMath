@@ -53,7 +53,8 @@ def search(query, api_key, cited_titles, limit=8, transport=_http):
     if not query.strip() or not 1 <= limit <= 25:
         raise ValueError("need a non-empty query and a limit between 1 and 25")
     run = transport({"provider": "exa", "endpoint": "/search",
-                     "input": {"query": query, "numResults": limit, "category": "research paper"}}, api_key)
+                     "input": {"query": query, "numResults": limit, "category": "research paper",
+                               "contents": {"text": {"maxCharacters": 900}}}}, api_key)
     if run.get("status") != "COMPLETED" or not isinstance(run.get("output", {}).get("results"), list):
         raise RuntimeError(f"Monid run did not complete: {str(run)[:300]}")
     cited = [_key(t) for t in cited_titles]
@@ -62,6 +63,7 @@ def search(query, api_key, cited_titles, limit=8, transport=_http):
         key = _key(item.get("title") or "")
         hits.append({"title": item.get("title") or "(untitled)", "url": item.get("url"),
                      "author": item.get("author"), "year": (item.get("publishedDate") or "")[:4] or None,
+                     "excerpt": re.sub(r"\s+", " ", item.get("text") or "").strip()[:900] or None,
                      "cited_by_paper": bool(key) and any(key in c or c in key for c in cited if c)})
     return {"query": query, "provider": "monid/exa", "hits": hits}
 
@@ -69,13 +71,14 @@ def search(query, api_key, cited_titles, limit=8, transport=_http):
 RELEVANCE = ("should_cite", "background", "unrelated")
 
 ASSESS_PROMPT = """A machine-written mathematics paper does not cite the works listed below, which a search
-returned as related. Judging only from each title (and author and year where given), say how
-it relates to the paper. Do not use tools. Reply with JSON only:
+returned as related. Using each work's title and the excerpt of its text where one is given, say
+how it relates to the paper. Do not use tools. Reply with JSON only:
 {{"items": [{{"index": <number from the list>, "relevance": "should_cite" | "background" | "unrelated",
             "reason": "<one plain sentence>"}}]}}
 "should_cite": it appears to address the same question or a result the paper builds on or
 improves. "background": same area, not the same question. "unrelated": different topic.
-You have not read these works; say so in the reason if the title alone is not enough.
+You have only the excerpt, not the full work; if there is no excerpt or it is not enough, say so
+in the reason and prefer "background".
 
 The paper: {query}
 
@@ -89,7 +92,9 @@ def assess(prior, model):
     if not uncited:
         return {**prior, "assessed": True}
     listing = "\n".join(f"{i}. {prior['hits'][i]['title']}" + (f" ({prior['hits'][i]['author']})" if prior["hits"][i].get("author") else "")
-                        + (f", {prior['hits'][i]['year']}" if prior["hits"][i].get("year") else "") for i in uncited)
+                        + (f", {prior['hits'][i]['year']}" if prior["hits"][i].get("year") else "")
+                        + (f"\n   excerpt: {prior['hits'][i]['excerpt']}" if prior["hits"][i].get("excerpt") else "\n   (no excerpt)")
+                        for i in uncited)
     try:
         data = json.loads(model(ASSESS_PROMPT.format(query=prior["query"], listing=listing)))
     except (TypeError, json.JSONDecodeError) as error:
@@ -100,4 +105,5 @@ def assess(prior, model):
                 and isinstance(item.get("reason"), str) and item["reason"].strip()):
             verdicts[item["index"]] = {"relevance": item["relevance"], "reason": item["reason"].strip()[:300]}
     hits = [{**hit, **verdicts.get(i, {})} for i, hit in enumerate(prior["hits"])]
-    return {**prior, "hits": hits, "assessed": True}
+    return {**prior, "hits": hits, "assessed": True,
+            "read_excerpts": sum(bool(prior["hits"][i].get("excerpt")) for i in uncited)}
