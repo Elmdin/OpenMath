@@ -22,5 +22,6 @@ Paper in -> briefing out, no human step:
 - `data/family-025/` first target paper (OpenAI, "Short Egyptian fractions"), see SOURCE.md
 - `docs/SETUP.md`    accounts, keys and the pre-build checklist
 - `docs/BRIEF.md`    the first paper, the picture, and the demo script
+- `docs/DECISIONS.md` what we decided and why; links to the full research doc
 - `supabase/schema.sql`
 - `agent/`, `web/`   empty until the build starts
