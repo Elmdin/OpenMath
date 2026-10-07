@@ -143,6 +143,7 @@
     <p class="note">Edges come from the paper's own cross-references. A result used without being cited by label would not appear.</p>
   </section>
 </main>
+<script src="config.js"></script>
 <script src="card.js"></script>
 <script src="audit.js"></script>
 <script src="prior.js"></script>
@@ -150,6 +151,8 @@
 <script>
 (function () {
   const card = window.CARD;
+  // Same origin when a server serves this page; the configured host when it is a static site.
+  const API = /github\.io$/.test(location.hostname) ? (window.OPENMATH_API || '') : '';
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   let mjQueue = Promise.resolve();
@@ -316,7 +319,7 @@
   render();
 
   // Live feed from Supabase, through the local server. Absent when the page is opened as static files.
-  fetch('/api/feed').then((r) => r.json()).then((d) => {
+  fetch(API + '/api/feed').then((r) => r.json()).then((d) => {
     if (!d.success || !d.data.length) return;
     for (const row of d.data) {
       const tr = el('tr');
