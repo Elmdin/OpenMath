@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenMath reading copilot</title>
+<style>
+  :root { --bg:#fbfaf7; --ink:#1c1b19; --muted:#6b675f; --line:#dedad0; --card:#fff;
+          --ok:#1f7a4d; --warn:#9a6200; --bad:#a3312b; --spine:#1d4f91; --spine-bg:#e8f0fb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#161513; --ink:#ece9e2; --muted:#9d988d; --line:#34322d; --card:#1f1e1b;
+            --ok:#5fc48f; --warn:#e0a94a; --bad:#ef7f77; --spine:#8fb8f2; --spine-bg:#1e2c40; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 system-ui, sans-serif; }
+  header { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
+  header h1 { font-size:1.1rem; margin:0; }
+  header a { color:var(--spine); font-size:.9rem; }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:20px; max-width:1200px; margin:0 auto; padding:16px; }
+  @media (max-width:900px) { .layout { grid-template-columns:1fr; } aside { position:static !important; max-height:none !important; } }
+  article { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:14px;
+            border-left:4px solid var(--line); transition:border-color .15s, opacity .15s; opacity:.72; overflow-x:auto; }
+  article.needed { border-left-color:var(--spine); }
+  article.active { opacity:1; box-shadow:0 0 0 2px var(--spine); }
+  article .head { font-size:.82rem; color:var(--muted); margin-bottom:6px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  article .kind { text-transform:capitalize; font-weight:600; color:var(--ink); }
+  .tag { font-size:.7rem; font-weight:600; letter-spacing:.03em; text-transform:uppercase; padding:1px 7px; border-radius:99px; border:1px solid currentColor; }
+  .t-need { color:var(--spine); } .t-skip { color:var(--muted); } .t-ok { color:var(--ok); } .t-warn { color:var(--warn); }
+  aside { position:sticky; top:12px; align-self:start; max-height:calc(100vh - 24px); overflow:auto;
+          background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  aside h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:16px 0 6px; }
+  aside h2:first-child { margin-top:0; }
+  .big { font-size:1.15rem; font-weight:650; margin:0 0 4px; }
+  .why { color:var(--muted); font-size:.9rem; margin:0; }
+  button.chip { font:12.5px ui-monospace, Menlo, monospace; padding:3px 9px; margin:0 6px 6px 0; border-radius:6px; cursor:pointer;
+                border:1px solid var(--spine); background:var(--spine-bg); color:var(--spine); }
+  button.chip.off { border-color:var(--line); background:transparent; color:var(--muted); }
+  .none { color:var(--muted); font-size:.9rem; }
+  pre { margin:0; padding:10px; background:var(--bg); border:1px solid var(--line); border-radius:8px; overflow-x:auto;
+        font:12px/1.45 ui-monospace, Menlo, monospace; white-space:pre-wrap; }
+  .flag { border-left:3px solid var(--warn); padding:4px 0 4px 10px; margin:8px 0; font-size:.9rem; }
+  .flag.mismatch { border-left-color:var(--bad); }
+  .bar { height:8px; border-radius:99px; background:var(--line); overflow:hidden; margin-top:6px; }
+  .bar > div { height:100%; background:var(--spine); width:0; transition:width .2s; }
+</style>
+<script>
+  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], macros: { N: '\\mathbb N', Z: '\\mathbb Z', R: '\\mathbb R', E: '\\mathbb E', Prob: '\\mathbb P', e: '\\mathrm e' } } };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+</head>
+<body>
+<header>
+  <h1>Reading copilot · <span id="paper"></span></h1>
+  <span style="color:var(--muted); font-size:.9rem">Scroll the paper's results. The panel follows the one you are on.</span>
+  <a href="index.html">← back to the review card</a>
+</header>
+<div class="layout">
+  <main id="results"></main>
+  <aside id="panel"></aside>
+</div>
+<script src="card.js"></script>
+<script src="audit.js"></script>
+<script>
+(function () {
+  const card = window.CARD, au = window.AUDIT;
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  if (!card) { $('results').textContent = 'card.js is missing. Run the agent first.'; return; }
+  $('paper').textContent = card.paper;
+
+  const nodes = new Map(card.map.nodes.map((n) => [n.label, n]));
+  const needed = new Set(card.spine);
+  const usedBy = new Map(card.map.nodes.map((n) => [n.label, []]));
+  for (const n of card.map.nodes) for (const d of n.deps) usedBy.get(d).push(n.label);
+  const seen = new Set();
+  const articles = new Map();
+
+  // Which headline result does a skippable lemma serve? (first theorem/corollary that reaches it)
+  function serves(label) {
+    const out = [];
+    for (const r of card.map.nodes.filter((n) => n.kind === 'theorem' || n.kind === 'corollary')) {
+      const stack = [r.label], visited = new Set();
+      while (stack.length) {
+        const x = stack.pop();
+        if (visited.has(x)) continue;
+        visited.add(x);
+        stack.push(...nodes.get(x).deps);
+      }
+      if (visited.has(label) && r.label !== label) out.push(r.label);
+    }
+    return out;
+  }
+
+  for (const n of card.map.nodes) {
+    const a = el('article', needed.has(n.label) ? 'needed' : '');
+    a.dataset.label = n.label;
+    const head = el('div', 'head');
+    head.append(el('span', 'kind', n.kind), el('span', null, n.label + (n.title ? ' · ' + n.title : '')),
+      el('span', 'tag ' + (needed.has(n.label) ? 't-need' : 't-skip'), needed.has(n.label) ? 'needed for main theorem' : 'skippable'));
+    a.append(head, el('div', null, n.statement));
+    $('results').append(a);
+    articles.set(n.label, a);
+  }
+  const typeset = (node) => { if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([node]).catch(() => {}); };
+
+  function chips(labels) {
+    const box = el('div');
+    if (!labels.length) { box.append(el('span', 'none', 'nothing')); return box; }
+    for (const l of labels) {
+      const b = el('button', 'chip' + (needed.has(l) ? '' : ' off'), l);
+      b.onclick = () => articles.get(l).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      box.append(b);
+    }
+    return box;
+  }
+
+  let active = null;
+  function show(label) {
+    if (label === active) return;
+    active = label;
+    seen.add(label);
+    for (const [l, a] of articles) a.classList.toggle('active', l === label);
+    const n = nodes.get(label), p = $('panel'), isNeeded = needed.has(label);
+    p.replaceChildren();
+    p.append(el('h2', null, 'You are on'), el('p', 'big', n.kind + ' ' + label));
+
+    p.append(el('h2', null, 'Do I need this?'));
+    if (label === card.root) {
+      p.append(el('p', 'big', 'This is the main result'), el('p', 'why', 'Everything marked "needed" exists to prove this.'));
+    } else if (isNeeded) {
+      p.append(el('p', 'big', 'Yes'), el('p', 'why', 'The main theorem depends on it, through: ' + (usedBy.get(label).filter((x) => needed.has(x)).join(', ') || card.root) + '.'));
+    } else {
+      const s = serves(label);
+      p.append(el('p', 'big', 'No, you can skip it'), el('p', 'why', 'It is not used by the main theorem. ' + (s.length ? 'It serves ' + s.join(', ') + '.' : (n.kind === 'corollary' ? 'It is a side result.' : ''))));
+    }
+
+    p.append(el('h2', null, 'It relies on'), chips(n.deps), el('h2', null, 'It is used by'), chips(usedBy.get(label)));
+
+    p.append(el('h2', null, 'What was checked here'));
+    if (label === card.root && card.formal) {
+      p.append(el('p', 'why', 'A formal statement exists for this result. The source says it is proved; we did not rebuild the proof.'), el('pre', null, card.formal.theorem));
+      if (au) {
+        const mism = au.original.flags.filter((f) => f.severity === 'mismatch').length;
+        p.append(el('p', 'why', 'Audit against the text on the left (model-written, quotes verified): ' + mism + ' mismatches, ' + (au.original.flags.length - mism) + ' notes.'));
+        for (const f of au.original.flags) p.append(el('div', 'flag ' + f.severity, f.summary));
+      }
+    } else {
+      p.append(el('p', 'why', 'No separate formal statement was published for this result, so nothing here was machine-checked by us. Its place in the argument comes from the paper\'s own cross-references.'));
+    }
+
+    const done = [...seen].filter((x) => needed.has(x)).length;
+    p.append(el('h2', null, 'Your progress'), el('p', 'why', 'Seen ' + done + ' of the ' + needed.size + ' results the main theorem needs.'));
+    const bar = el('div', 'bar'), fill = el('div');
+    fill.style.width = (100 * done / needed.size) + '%';
+    bar.append(fill);
+    p.append(bar);
+  }
+
+  // Follow the result closest to a line one third down the viewport.
+  function track() {
+    if (window.scrollY < 10) { show(card.map.nodes[0].label); return; }
+    const line = window.innerHeight / 3;
+    let best = null, bestDist = Infinity;
+    for (const [label, a] of articles) {
+      const r = a.getBoundingClientRect();
+      const dist = r.top <= line && r.bottom >= line ? 0 : Math.min(Math.abs(r.top - line), Math.abs(r.bottom - line));
+      if (dist < bestDist) { bestDist = dist; best = label; }
+    }
+    if (best) show(best);
+  }
+  let queued = false;
+  window.addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; track(); }); } }, { passive: true });
+  window.addEventListener('resize', track);
+  typeset($('results'));
+  track();
+})();
+</script>
+</body>
+</html>
