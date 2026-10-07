@@ -81,6 +81,11 @@
     <p style="margin:14px 0 0"><a href="reader.html" style="font-weight:600">Review the paper with the copilot →</a>
       <span class="note" style="margin-left:6px">one step at a time, with pictures, a chat, and code the agent runs for you</span></p>
   </section>
+  <section id="feed-section" hidden>
+    <h2>Review feed <span class="rung r-ok">Supabase</span></h2>
+    <p class="sub" style="margin-bottom:10px">Every finished review is stored as a row. Latest runs:</p>
+    <table id="feed"><thead><tr><th>row</th><th>paper</th><th>saved</th></tr></thead><tbody></tbody></table>
+  </section>
   <p class="sub" style="margin:22px 0 10px">The evidence behind each answer (click to open):</p>
 
   <section>
@@ -307,6 +312,17 @@
   }
   $('root').onchange = () => { selected = null; render(); };
   render();
+
+  // Live feed from Supabase, through the local server. Absent when the page is opened as static files.
+  fetch('/api/feed').then((r) => r.json()).then((d) => {
+    if (!d.success || !d.data.length) return;
+    for (const row of d.data) {
+      const tr = el('tr');
+      tr.append(el('td', null, '#' + row.id), el('td', null, row.title), el('td', null, new Date(row.created_at).toLocaleTimeString()));
+      $('feed').tBodies[0].append(tr);
+    }
+    $('feed-section').hidden = false;
+  }).catch(() => {});
 
   for (const s of document.querySelectorAll('main > section:not(#hero)')) {
     const h2 = s.querySelector('h2');
