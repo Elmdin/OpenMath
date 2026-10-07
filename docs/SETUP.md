@@ -5,7 +5,7 @@
 - [ ] Create one Agent37 instance now and wait for health; cold start is the main demo risk.
 - [ ] OpenAI: API key with credit. Ask the OpenAI people at kickoff about hackathon credits.
 - [ ] Supabase: new project, run `supabase/schema.sql`, copy the URL and anon key.
-- [ ] GitHub: new PUBLIC repo `catchup-agent`. Do not push anything from naturefind (private).
+- [x] GitHub: repo `Elmdin/OpenMath` (created; currently private, make it public before submitting if the rules need a public repo). Do not push anything from naturefind (private).
 - [ ] `cp .env.example .env` and fill it in.
 
 ## Agent37 calls (from its docs, not yet run by us)

@@ -1,4 +1,4 @@
-# Catch-Up Agent
+# OpenMath — Catch-Up Agent
 
 An agent that turns an AI-generated math paper into a playable picture, unattended.
 Built at the "Build an Agent" Hackathon, Corgi Cafe, San Francisco, Oct 7, 2026.
