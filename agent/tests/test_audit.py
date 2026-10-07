@@ -72,3 +72,15 @@ def test_mismatch_on_equivalent_control_counts_against_the_auditor():
     report = run_eval(CLAIM, LEAN, lambda prompt: reply(flag("1 ≤ n")) if "1 ≤ n)" in prompt else reply())
     assert report["caught"] == 0
     assert report["controls_clean"] == 2 and report["false_flag_on_original"] is False
+
+
+def test_paper_quote_may_omit_math_delimiters():
+    result = audit(CLAIM, LEAN, lambda _: reply(flag("b₀ ≤ b", paper_quote="for every integer b\\ge b_0")))
+    assert len(result["flags"]) == 1 and result["rejected"] == []
+
+
+def test_unescaped_latex_backslashes_in_reply_are_repaired():
+    raw = '{"flags": [{"severity": "note", "summary": "uses \\log and \\nu", "paper_quote": "b\\ge b_0", "lean_quote": "b₀ ≤ b →\\n        c₁"}]}'
+    result = audit(CLAIM, LEAN, lambda _: raw)
+    assert len(result["flags"]) == 1 and result["rejected"] == []
+    assert result["flags"][0]["summary"] == "uses \\log and \\nu"

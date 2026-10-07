@@ -6,7 +6,9 @@ import json
 import sys
 from pathlib import Path
 
-from agent import priorwork, publish, run_audit
+import time
+
+from agent import notes, priorwork, publish, run_audit
 from agent.agent37 import load_env
 from agent.card import build_card
 
@@ -17,15 +19,21 @@ def run(paper_dir, title, provider, web_dir="web"):
     card = build_card(paper_dir, "thm:main", EXAMPLE)
     Path(web_dir, "card.js").write_text("window.CARD = " + json.dumps(card, indent=1) + ";\n", encoding="utf-8")
     audit = run_audit.main(paper_dir, Path(web_dir, "audit.js"), provider, None)
+    started = time.time()
+    review = notes.review_paper(card["map"], run_audit.build_model(provider, None))
+    review_out = {"provider": provider, "seconds": round(time.time() - started, 1), "notes": review}
+    Path(web_dir, "notes.js").write_text("window.NOTES = " + json.dumps(review_out, indent=1, ensure_ascii=False) + ";\n",
+                                         encoding="utf-8")
     tex_dir = Path(paper_dir, "tex")
     env = {**load_env(Path(__file__).resolve().parents[2] / ".env"), **load_env()}
     prior = priorwork.search(priorwork.paper_query(tex_dir), env.get("MONID_API_KEY") or env.get("MONDI_API_KEY"),
                              priorwork.bib_titles(tex_dir))
     Path(web_dir, "prior.js").write_text("window.PRIOR = " + json.dumps(prior, indent=1) + ";\n", encoding="utf-8")
-    row = publish.publish(title, {"card": card, "audit": audit, "prior_work": prior})
+    row = publish.publish(title, {"card": card, "audit": audit, "prior_work": prior, "notes": review})
     Path(web_dir, "run.js").write_text("window.RUN = " + json.dumps({"row_id": row.get("id"), "provider": provider}) + ";\n",
                                        encoding="utf-8")
-    return {"row_id": row.get("id"), "prior_hits": len(prior["hits"]),
+    return {"row_id": row.get("id"), "notes": sum("error" not in n for n in review.values()),
+            "prior_hits": len(prior["hits"]),
             "prior_uncited": sum(not h["cited_by_paper"] for h in prior["hits"]), "caught": audit["caught"], "total": audit["total"],
             "controls_clean": audit["controls_clean"], "controls": audit["controls"], "seconds": audit["seconds"]}
 
