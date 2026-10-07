@@ -233,8 +233,8 @@ PICTURES = ("shortest", "greedy", "none")
 def parse_spec(raw):
     """Validate the agent's picture choice; the page only ever draws from this fixed library."""
     try:
-        spec = json.loads(extract_json(raw))
-    except (Agent37Error, json.JSONDecodeError) as error:
+        spec = audit._loads(extract_json(raw))
+    except (Agent37Error, ValueError) as error:
         raise ValueError(f"picture spec is not JSON: {error}") from error
     picture, a, b, caption = spec.get("picture"), spec.get("a"), spec.get("b"), spec.get("caption")
     if picture not in PICTURES:
@@ -292,6 +292,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404)
         return None
 
+    # Agent failures use 424, not 502: proxies replace 502 bodies with their own HTML, which the page cannot read.
     def _send(self, status, payload):
         body = json.dumps(payload, ensure_ascii=False).encode()
         self.send_response(status)
@@ -308,7 +309,7 @@ class Handler(SimpleHTTPRequestHandler):
             rows = publish.latest(8)
         except (RuntimeError, ValueError) as error:
             print(f"feed failed: {error}", file=sys.stderr)
-            return self._send(502, {"success": False, "data": None, "error": "the feed is not reachable"})
+            return self._send(424, {"success": False, "data": None, "error": "the feed is not reachable"})
         return self._send(200, {"success": True, "data": rows, "error": None, "meta": {"limit": 8}})
 
     def do_POST(self):
@@ -335,27 +336,27 @@ class Handler(SimpleHTTPRequestHandler):
             answer = self.ask(prompt)
         except Agent37Error as error:
             print(f"ask failed: {error}", file=sys.stderr)
-            return self._send(502, {"success": False, "data": None, "error": "the agent did not answer; try again"})
+            return self._send(424, {"success": False, "data": None, "error": "the agent did not answer; try again"})
         data = {"answer": answer, "provider": "agent37", "mode": mode}
         if mode == "show":
             try:
                 data = {**data, "spec": parse_spec(answer)}
             except ValueError as error:
                 print(f"bad picture spec: {error}", file=sys.stderr)
-                return self._send(502, {"success": False, "data": None, "error": "the agent chose a picture we cannot draw; try again"})
+                return self._send(424, {"success": False, "data": None, "error": "the agent chose a picture we cannot draw; try again"})
         if mode == "check":
             node = next(n for n in self.card["map"]["nodes"] if n["label"] == body.get("label"))
             try:
                 data = {**data, "review": parse_check(answer, node["proof"]), "answer": ""}
             except ValueError as error:
                 print(f"bad check: {error}", file=sys.stderr)
-                return self._send(502, {"success": False, "data": None, "error": "the agent's check was not usable; try again"})
+                return self._send(424, {"success": False, "data": None, "error": "the agent's check was not usable; try again"})
         if mode == "draw":
             try:
                 data = {**data, "drawing": parse_drawing(answer), "answer": ""}
             except ValueError as error:
                 print(f"bad drawing: {error}", file=sys.stderr)
-                return self._send(502, {"success": False, "data": None, "error": "the agent did not return a usable drawing; try again"})
+                return self._send(424, {"success": False, "data": None, "error": "the agent did not return a usable drawing; try again"})
         return self._send(200, {"success": True, "data": data, "error": None})
 
 

@@ -399,7 +399,7 @@
     log.push({ who: 'you', text: question }, { who: 'bot', text: mode === 'test' ? 'Writing a test and running it on Agent37. This takes about half a minute…' : mode === 'show' ? 'Choosing a picture for this step…' : mode === 'draw' ? 'Computing data and drawing a new picture on Agent37. This can take a minute or two…' : mode === 'check' ? 'Reading the proof step by step…' : 'Thinking…' });
     busy = true; $('send').disabled = true; $('q').value = '';
     renderChat();
-    let reply = { who: 'bot err', text: 'The copilot is not reachable. Start it with: python -m agent.server' };
+    let reply = { who: 'bot err', text: 'The copilot did not respond. Please try again in a moment.' };
     try {
       const res = await fetch(API + '/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, question, mode: mode || 'ask' }) });
       const data = await res.json();

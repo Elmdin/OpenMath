@@ -107,3 +107,8 @@ def test_rate_limit_caps_total_and_per_client_and_recovers():
     assert not limit.allow("c")          # global cap
     now[0] = 61.0
     assert limit.allow("a")              # window has passed
+
+
+def test_picture_spec_with_unescaped_latex_is_accepted():
+    spec = parse_spec('{"picture": "shortest", "a": 4, "b": 5, "caption": "Needs \\(3\\) cups since \\frac{4}{5} is close to 1."}')
+    assert spec["picture"] == "shortest" and "\\frac{4}{5}" in spec["caption"]
