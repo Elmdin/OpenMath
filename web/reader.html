@@ -48,6 +48,7 @@
   .msg.bot { background:var(--bg); border:1px solid var(--line); margin-right:12px; }
   .msg.err { color:var(--bad); border-color:var(--bad); }
   .msg p { margin:0 0 8px; } .msg p:last-child { margin:0; }
+  .msg pre { font-size:11.5px; max-height:260px; overflow:auto; }
   .hint { color:var(--muted); font-size:.9rem; }
   .quick { padding:8px 14px 0; display:flex; flex-wrap:wrap; gap:6px; }
   .quick button { font:inherit; font-size:.82rem; padding:4px 10px; border-radius:99px; border:1px solid var(--line); background:transparent; color:var(--ink); cursor:pointer; }
@@ -104,7 +105,8 @@
   const SVG = 'http://www.w3.org/2000/svg';
   const svg = (tag, attrs, text) => { const e = document.createElementNS(SVG, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
   const by = (name, code) => el('span', 'by' + (code ? ' code' : ''), name);
-  const typeset = (node) => { if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([node]).catch(() => {}); };
+  let mjQueue = Promise.resolve();
+  const typeset = (node) => { mjQueue = mjQueue.then(() => (window.MathJax && MathJax.typesetPromise) ? MathJax.typesetPromise([node]) : null).catch(() => {}); };
 
   const nodes = new Map(card.map.nodes.map((n) => [n.label, n]));
   const needed = new Set(card.spine);
@@ -158,6 +160,14 @@
     }
     return out + prose(tex.slice(last));
   }
+  // Model-written text sometimes arrives with doubled backslashes or bare TeX outside delimiters.
+  function tidyModel(t) {
+    t = t.replace(/\\\\(?=[()\[\]a-zA-Z])/g, '\\');
+    let out = '', last = 0;
+    const bare = (s) => s.replace(/([A-Za-z0-9]+(?:[_^](?:\{[^{}]*\}|[A-Za-z0-9]))+|\\[a-zA-Z]+(?:\{[^{}]*\})*)/g, '\\($1\\)');
+    for (const m of t.matchAll(MATH)) { out += bare(t.slice(last, m.index)) + m[0]; last = m.index + m[0].length; }
+    return out + bare(t.slice(last));
+  }
   function paragraphs(tex, cls) {
     const box = el('div', cls || 'body');
     for (const part of readable(tex).split(/\n\s*\n/)) if (part.trim()) box.append(el('p', null, part.replace(/[ \t]+/g, ' ').trim()));
@@ -178,10 +188,10 @@
     const ex = card.explore, box = el('div', 'viz');
     const row = el('div'), ia = el('input'), ib = el('input');
     for (const [inp, v] of [[ia, 77], [ib, 79]]) { inp.type = 'number'; inp.min = 1; inp.max = ex.b_max; inp.value = v; }
-    row.append(document.createTextNode('Fill a glass to '), ia, document.createTextNode(' / '), ib, document.createTextNode('  using cups of size 1/2, 1/3, 1/4, … each at most once.'));
+    row.append(document.createTextNode('Fill a glass to '), ia, document.createTextNode(' / '), ib, document.createTextNode('  with cups 1/2, 1/3, 1/4, … used once each'));
     const glass = svg('svg', { viewBox: '0 0 600 64', role: 'img' }), eq = el('div', 'eq');
     const chart = svg('svg', { viewBox: '0 0 600 170', role: 'img' });
-    box.append(row, glass, eq, el('p', 'muted', 'Below: for every denominator b up to ' + ex.b_max + ', the most cups any fraction a/b needs. The theorem says this grows like log log b, which is why the dots barely climb.'), chart);
+    box.append(row, glass, eq, el('p', 'muted', 'Most cups needed for each denominator b. It barely climbs: that is the theorem.'), chart);
     const max = Math.max(...ex.series.map((s) => s[1]));
     const X = (b) => 34 + (b - 2) * (556 / (ex.b_max - 2)), Y = (k) => 150 - k * (130 / max);
     function drawChart(bSel) {
@@ -203,8 +213,58 @@
       const mark = 600 * a / b;
       glass.append(svg('line', { x1: mark, x2: mark, y1: 2, y2: 48, stroke: 'var(--warn)', 'stroke-width': 2 }));
       glass.append(svg('text', { x: Math.min(Math.max(mark, 20), 575), y: 60, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--warn)' }, a + '/' + b));
-      eq.textContent = a + '/' + b + ' = ' + ns.map((n) => '1/' + n).join(' + ') + '   →  ' + ns.length + ' cup' + (ns.length > 1 ? 's' : '') + ', and no shorter way exists.';
+      eq.textContent = a + '/' + b + ' = ' + ns.map((n) => '1/' + n).join(' + ') + '   →  ' + ns.length + ' cup' + (ns.length > 1 ? 's' : '') + ' (the fewest possible)';
       drawChart(b);
+    }
+    ia.oninput = draw; ib.oninput = draw; draw();
+    return box;
+  }
+
+  // Where the current step sits: the results the main theorem needs, by depth, with this one lit.
+  function treeVisual(current) {
+    const depth = new Map([[card.root, 0]]), queue = [card.root];
+    for (let i = 0; i < queue.length; i++) for (const d of nodes.get(queue[i]).deps) if (!depth.has(d)) { depth.set(d, depth.get(queue[i]) + 1); queue.push(d); }
+    const rows = []; for (const [l, d] of depth) (rows[d] = rows[d] || []).push(l);
+    const W = 640, RH = 62, H = rows.length * RH + 6, pos = new Map();
+    rows.forEach((r, d) => r.forEach((l, i) => pos.set(l, { x: W * (i + 1) / (r.length + 1), y: d * RH + 24 })));
+    const s = svg('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img' });
+    for (const [l, pt] of pos) for (const d of nodes.get(l).deps) { const q = pos.get(d); if (q) s.append(svg('line', { x1: pt.x, y1: pt.y + 13, x2: q.x, y2: q.y - 13, stroke: (l === current || d === current) ? 'var(--spine)' : 'var(--line)', 'stroke-width': (l === current || d === current) ? 2 : 1 })); }
+    for (const [l, pt] of pos) {
+      const name = (nodes.get(l).title || short(l)), text = name.length > 22 ? name.slice(0, 21) + '…' : name, w = Math.max(70, text.length * 6.6 + 16), on = l === current;
+      const g = svg('g', { style: 'cursor:pointer' });
+      g.append(svg('rect', { x: pt.x - w / 2, y: pt.y - 13, width: w, height: 26, rx: 6, fill: on ? 'var(--spine)' : 'var(--card)', stroke: reviewed.has(l) ? 'var(--ok)' : 'var(--spine)', 'stroke-width': reviewed.has(l) ? 2 : 1 }));
+      g.append(svg('text', { x: pt.x, y: pt.y + 4, 'text-anchor': 'middle', 'font-size': 11.5, fill: on ? '#fff' : 'var(--ink)' }, text));
+      g.addEventListener('click', () => go(order.indexOf(l)));
+      s.append(g);
+    }
+    const box = el('div', 'viz');
+    box.append(s, el('p', 'muted', 'Main theorem on top; a line means “uses”. Filled: you are here. Green: reviewed. Click to jump.'));
+    return box;
+  }
+
+  // The greedy procedure the lemma is about: always take the biggest cup that fits.
+  function greedyVisual() {
+    const box = el('div', 'viz'), row = el('div'), ia = el('input'), ib = el('input'), out = el('div');
+    for (const [inp, v] of [[ia, 5], [ib, 121]]) { inp.type = 'number'; inp.min = 1; inp.max = 500; inp.value = v; }
+    row.append(document.createTextNode('Pour '), ia, document.createTextNode(' / '), ib, document.createTextNode('  greedily: always the biggest cup that fits'));
+    box.append(row, out);
+    function draw() {
+      const a0 = parseInt(ia.value, 10), b0 = parseInt(ib.value, 10);
+      out.replaceChildren();
+      if (!(a0 >= 1 && a0 < b0 && b0 <= 500)) { out.append(el('p', 'muted', 'Choose whole numbers with 1 ≤ a < b ≤ 500.')); return; }
+      let A = BigInt(a0), C = BigInt(b0); const steps = [];
+      while (A > 0n && steps.length < 12) { const z = (C + A - 1n) / A; steps.push({ z, C }); const nA = A * z - C, nC = C * z, g = gcd(nA, nC) || 1n; A = nA / g; C = nC / g; }
+      const maxDigits = Math.max(...steps.map((s) => s.z.toString().length));
+      const s = svg('svg', { viewBox: '0 0 600 ' + (steps.length * 26 + 8), role: 'img' });
+      steps.forEach((st, i) => {
+        const digits = st.z.toString().length, w = Math.max(6, 300 * digits / maxDigits), zs = st.z.toString();
+        s.append(svg('text', { x: 0, y: i * 26 + 18, 'font-size': 12, fill: 'var(--muted)' }, 'cup ' + (i + 1)));
+        s.append(svg('rect', { x: 50, y: i * 26 + 5, width: w, height: 17, rx: 3, fill: 'var(--warn)' }));
+        s.append(svg('text', { x: 58 + w, y: i * 26 + 18, 'font-size': 12, fill: 'var(--ink)' }, '1/' + (zs.length > 16 ? zs.slice(0, 6) + '…' + zs.slice(-3) + ' (' + zs.length + ' digits)' : zs)));
+      });
+      const best = b0 <= 200 ? shortest(a0, b0) : null;
+      out.append(s, el('p', null, 'Greedy: ' + steps.length + (A > 0n ? '+' : '') + ' cups, denominators roughly squaring each step.' +
+        (best ? ' Fewest possible: ' + best.length + '.' : '')));
     }
     ia.oninput = draw; ib.oninput = draw; draw();
     return box;
@@ -234,31 +294,33 @@
     const label = order[i], n = nodes.get(label), isNeeded = needed.has(label), note = notes[label], p = $('piece');
     p.replaceChildren();
     const crumb = el('div', 'crumb');
-    crumb.append(el('span', null, n.section || 'Paper'), el('span', 'tag ' + (isNeeded ? 't-need' : 't-skip'), isNeeded ? 'needed for the main theorem' : 'optional: not used by the main theorem'));
+    crumb.append(el('span', null, n.section || 'Paper'), el('span', 'tag ' + (isNeeded ? 't-need' : 't-skip'), isNeeded ? 'needed' : 'optional'));
     p.append(crumb, el('h2', null, cap(n.kind) + (n.title ? ': ' + n.title : label === card.root ? ': the main result' : ' “' + short(label) + '”')));
 
-    if (note && !note.error) { const box = el('div', 'plain'), l = el('span', 'lbl', 'In plain words'); l.append(by('Agent37, model-written')); box.append(l, paragraphs(note.role)); p.append(box); }
-    p.append(el('span', 'lbl', 'What the paper states'), paragraphs(n.statement));
+    if (note && !note.error) { const box = el('div', 'plain'), l = el('span', 'lbl', 'In plain words'); l.append(by('Agent37')); box.append(l, paragraphs(tidyModel(note.role))); p.append(box); }
+    p.append(el('span', 'lbl', 'The paper says'), paragraphs(n.statement));
 
-    if (label === card.root && card.explore) p.append(fold('See it with numbers', by('exact, computed in your browser', true), visual, true));
-    if (n.proof) p.append(fold('Read the proof (' + n.proof.split(/\s+/).length.toLocaleString() + ' words)', null, () => paragraphs(n.proof)));
-    if (note && !note.error && note.checks.length) p.append(fold('What a referee should check here (' + note.checks.length + ')', by('Agent37, quotes verified'), () => {
+    if (label === card.root && card.explore) p.append(fold('See it with numbers', by('exact', true), visual, true));
+    if (label === 'lem:greedy') p.append(fold('See it with numbers', by('exact', true), greedyVisual, true));
+    if (isNeeded) p.append(fold('Where this sits in the argument', null, () => treeVisual(label), label !== card.root));
+    if (n.proof) p.append(fold('Proof (' + n.proof.split(/\s+/).length.toLocaleString() + ' words)', null, () => paragraphs(n.proof)));
+    if (note && !note.error && note.checks.length) p.append(fold('What to check here (' + note.checks.length + ')', by('Agent37'), () => {
       const c = el('div');
-      for (const ch of note.checks) { const d = el('div', 'check'); d.append(paragraphs(ch.point)); c.append(d); }
+      for (const ch of note.checks) { const d = el('div', 'check'); d.append(paragraphs(tidyModel(ch.point))); c.append(d); }
       if (note.rejected) c.append(el('p', 'muted', note.rejected + ' more suggestion' + (note.rejected > 1 ? 's were' : ' was') + ' dropped because the quoted text was not in the paper.'));
       return c;
     }));
-    p.append(fold('How it connects', by('parsed from the paper', true), () => {
+    if (!isNeeded) p.append(fold('How it connects', null, () => {
       const c = el('div');
       c.append(el('p', 'muted', 'It relies on:'), chips(n.deps), el('p', 'muted', 'It is used by:'), chips(usedBy.get(label)));
       return c;
     }));
-    if (label === card.root && card.formal) p.append(fold('The computer-checked version', by('Agent37 audit'), () => {
+    if (label === card.root && card.formal) p.append(fold('Computer-checked version', by('Agent37 audit'), () => {
       const c = el('div');
-      c.append(el('p', 'muted', 'This is the formal statement the source says is proved. We did not rebuild that proof.'), el('pre', null, card.formal.theorem));
+      c.append(el('p', 'muted', 'The formal statement the source says is proved (not rebuilt by us).'), el('pre', null, card.formal.theorem));
       if (au) { const mism = au.original.flags.filter((f) => f.severity === 'mismatch').length;
         c.append(el('p', 'muted', 'Compared with the statement above: ' + mism + ' mismatches, ' + (au.original.flags.length - mism) + ' notes.'));
-        for (const f of au.original.flags) c.append(el('div', 'flag ' + f.severity, f.summary)); }
+        for (const f of au.original.flags) { const d = el('div', 'flag ' + f.severity); d.append(paragraphs(tidyModel(f.summary))); c.append(d); } }
       return c;
     }));
 
@@ -282,31 +344,38 @@
   function renderChat() {
     const label = order[at], box = $('msgs'), log = chats.get(label) || [];
     box.replaceChildren();
-    if (!log.length) box.append(el('p', 'hint', 'Ask about the step on the left. The copilot sees its statement and proof and answers in plain language. It does not judge whether the proof is correct.'));
-    for (const m of log) { const d = el('div', 'msg ' + m.who); d.append(m.who === 'you' ? el('p', null, m.text) : paragraphs(m.text)); box.append(d); }
+    if (!log.length) box.append(el('p', 'hint', 'Ask about this step, or have the agent test it by running code.'));
+    for (const m of log) { const d = el('div', 'msg ' + m.who); d.append(m.who === 'you' ? el('p', null, m.text) : rich(m.text)); if (m.ran) d.append(el('p', 'muted', 'Run in the agent’s Agent37 sandbox; output as it reported.')); box.append(d); }
     typeset(box);
     box.scrollTop = box.scrollHeight;
   }
+  // Agent replies: fenced blocks become code, the rest readable text.
+  function rich(text) {
+    const box = el('div');
+    text.split(/```[a-z]*\n?/).forEach((part, i) => { if (!part.trim()) return; box.append(i % 2 ? el('pre', null, part.replace(/\s+$/, '')) : paragraphs(tidyModel(part))); });
+    return box;
+  }
   let busy = false;
-  async function ask(question) {
+  async function ask(question, mode) {
     question = question.trim();
     if (!question || busy) return;
     const label = order[at], log = chats.get(label) || [];
     chats.set(label, log);
-    log.push({ who: 'you', text: question }, { who: 'bot', text: 'Thinking…' });
+    log.push({ who: 'you', text: question }, { who: 'bot', text: mode === 'test' ? 'Writing a test and running it on Agent37. This takes about half a minute…' : 'Thinking…' });
     busy = true; $('send').disabled = true; $('q').value = '';
     renderChat();
     let reply = { who: 'bot err', text: 'The copilot is not reachable. Start it with: python -m agent.server' };
     try {
-      const res = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, question }) });
+      const res = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, question, mode: mode || 'ask' }) });
       const data = await res.json();
-      reply = data.success ? { who: 'bot', text: data.data.answer } : { who: 'bot err', text: data.error || 'Something went wrong.' };
+      reply = data.success ? { who: 'bot', text: data.data.answer, ran: mode === 'test' } : { who: 'bot err', text: data.error || 'Something went wrong.' };
     } catch (e) { /* keep the unreachable message */ }
     log[log.length - 1] = reply;
     busy = false; $('send').disabled = false;
     if (order[at] === label) renderChat();
   }
   $('ask').onsubmit = (e) => { e.preventDefault(); ask($('q').value); };
+  { const b = el('button', null, '▶ Test this step by experiment'); b.type = 'button'; b.title = 'The agent writes a script and runs it in its Agent37 cloud sandbox'; b.style.borderColor = 'var(--spine)'; b.style.color = 'var(--spine)'; b.onclick = () => ask('Test this step on small cases.', 'test'); $('quick').append(b); }
   for (const q of ['Explain this step simply', 'Why is this needed?', 'Give a small example', 'What could go wrong here?']) { const b = el('button', null, q); b.type = 'button'; b.onclick = () => ask(q); $('quick').append(b); }
 
   // ---- navigation
