@@ -23,5 +23,6 @@ Paper in -> briefing out, no human step:
 - `docs/SETUP.md`    accounts, keys and the pre-build checklist
 - `docs/BRIEF.md`    the first paper, the picture, and the demo script
 - `docs/DECISIONS.md` what we decided and why; links to the full research doc
+- `docs/REQUIREMENTS.md` hackathon rules, sponsor plan, submission checklist
 - `supabase/schema.sql`
 - `agent/`, `web/`   empty until the build starts
