@@ -50,7 +50,9 @@ https://github.com/Elmdin/OpenMath
   `POST /v1/instances`, wait on `/v1/health`, and call `POST /v1/responses` on it for: (1) the
   statement audit and its self-evaluation, 7 turns per paper; (2) a reviewer's note for each of
   the 19 results; (3) the live copilot chat, with the step on screen as context, including picking a picture
-  and its inputs from a fixed library for the page to draw; (4) experiments,
+  and its inputs from a fixed library for the page to draw; (4) a step-by-step referee read of any proof, flagging steps that need detail, each tied to
+  a quoted line; (5) newly generated 2D/3D pictures computed in the sandbox; (6) judging which
+  uncited search hits look like they should have been cited; (7) experiments,
   where the agent writes a Python test and runs it in its own cloud sandbox. Code:
   `agent/agent37.py`, `agent/notes.py`, `agent/server.py`.
 - Supabase: every finished card, with its audit, self-evaluation and prior-work results, is

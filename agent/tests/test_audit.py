@@ -84,3 +84,9 @@ def test_unescaped_latex_backslashes_in_reply_are_repaired():
     result = audit(CLAIM, LEAN, lambda _: raw)
     assert len(result["flags"]) == 1 and result["rejected"] == []
     assert result["flags"][0]["summary"] == "uses \\log and \\nu"
+
+
+def test_reply_mixing_escaped_and_unescaped_backslashes_is_repaired():
+    from agent.audit import _loads
+    raw = '{"a": "ok \\\\(x\\\\) and bare \\(y\\) and \\frac"}'
+    assert _loads(raw) == {"a": "ok \\(x\\) and bare \\(y\\) and \\frac"}

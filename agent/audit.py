@@ -68,8 +68,9 @@ def _quotable(text):
     return _squash(re.sub(r"\$|\\[()]", "", text))
 
 
-# A backslash that is not a JSON escape the model plausibly meant: \", \\, \uXXXX, or \n not starting a LaTeX command.
-_LATEX_BACKSLASH = re.compile(r'\\(?!["\\]|u[0-9a-fA-F]{4}|n(?![a-zA-Z]))')
+# Either an already-escaped backslash (kept as is), or a lone one that is not a JSON escape the model
+# plausibly meant (\", \uXXXX, or \n not starting a LaTeX command) and so needs doubling.
+_LATEX_BACKSLASH = re.compile(r'\\\\|\\(?!"|u[0-9a-fA-F]{4}|n(?![a-zA-Z]))')
 
 
 def _loads(raw):
@@ -79,8 +80,9 @@ def _loads(raw):
     except TypeError as error:
         raise ValueError(f"model did not return JSON: {error}") from error
     except json.JSONDecodeError:
+        repaired = _LATEX_BACKSLASH.sub(lambda m: m.group(0) if len(m.group(0)) == 2 else "\\\\", raw)
         try:
-            return json.loads(_LATEX_BACKSLASH.sub(r"\\\\", raw))
+            return json.loads(repaired)
         except json.JSONDecodeError as error:
             raise ValueError(f"model did not return JSON: {error}") from error
 
