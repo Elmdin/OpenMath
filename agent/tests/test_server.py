@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from agent.card import build_card
-from agent.server import MAX_QUESTION, build_prompt
+from agent.server import MAX_QUESTION, build_prompt, parse_spec
 
 CARD = build_card(Path(__file__).resolve().parents[2] / "data" / "family-025", "thm:main",
                   {"a": 5, "b": 181, "denominators": [39, 507, 91767]})
@@ -37,3 +37,23 @@ def test_test_mode_asks_for_a_script_and_its_real_output():
 def test_unknown_mode_is_rejected():
     with pytest.raises(ValueError):
         build_prompt(CARD, "lem:greedy", "x", mode="prove")
+
+
+def test_picture_spec_is_validated():
+    spec = parse_spec('Sure: {"picture": "greedy", "a": 5, "b": 121, "caption": " Watch the denominators. "}')
+    assert spec == {"picture": "greedy", "a": 5, "b": 121, "caption": "Watch the denominators."}
+
+
+@pytest.mark.parametrize("raw", ['no json', '{"picture": "movie", "a": 1, "b": 2, "caption": "x"}',
+                                 '{"picture": "greedy", "a": 5, "b": 5, "caption": "x"}',
+                                 '{"picture": "greedy", "a": 5, "b": 999, "caption": "x"}',
+                                 '{"picture": "greedy", "a": "5", "b": 9, "caption": "x"}',
+                                 '{"picture": "shortest", "a": 1, "b": 2, "caption": ""}'])
+def test_bad_picture_specs_are_rejected(raw):
+    with pytest.raises(ValueError):
+        parse_spec(raw)
+
+
+def test_show_mode_lists_the_picture_library():
+    prompt = build_prompt(CARD, "lem:greedy", "Show me.", mode="show")
+    assert '"shortest"' in prompt and '"greedy"' in prompt and '"none"' in prompt

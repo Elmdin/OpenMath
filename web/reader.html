@@ -184,14 +184,15 @@
     return null;
   }
   function shortest(a, b) { const g = gcd(BigInt(a), BigInt(b)); for (let t = 1; t <= 7; t++) { const r = search(BigInt(a) / g, BigInt(b) / g, t, 2n); if (r) return r; } return null; }
-  function visual() {
+  function visual(a0, b0, compact) {
     const ex = card.explore, box = el('div', 'viz');
     const row = el('div'), ia = el('input'), ib = el('input');
-    for (const [inp, v] of [[ia, 77], [ib, 79]]) { inp.type = 'number'; inp.min = 1; inp.max = ex.b_max; inp.value = v; }
+    for (const [inp, v] of [[ia, a0 || 77], [ib, b0 || 79]]) { inp.type = 'number'; inp.min = 1; inp.max = ex.b_max; inp.value = v; }
     row.append(document.createTextNode('Fill a glass to '), ia, document.createTextNode(' / '), ib, document.createTextNode('  with cups 1/2, 1/3, 1/4, … used once each'));
     const glass = svg('svg', { viewBox: '0 0 600 64', role: 'img' }), eq = el('div', 'eq');
     const chart = svg('svg', { viewBox: '0 0 600 170', role: 'img' });
-    box.append(row, glass, eq, el('p', 'muted', 'Most cups needed for each denominator b. It barely climbs: that is the theorem.'), chart);
+    box.append(row, glass, eq);
+    if (!compact) box.append(el('p', 'muted', 'Most cups needed for each denominator b. It barely climbs: that is the theorem.'), chart);
     const max = Math.max(...ex.series.map((s) => s[1]));
     const X = (b) => 34 + (b - 2) * (556 / (ex.b_max - 2)), Y = (k) => 150 - k * (130 / max);
     function drawChart(bSel) {
@@ -243,16 +244,16 @@
   }
 
   // The greedy procedure the lemma is about: always take the biggest cup that fits.
-  function greedyVisual() {
+  function greedyVisual(a0, b0) {
     const box = el('div', 'viz'), row = el('div'), ia = el('input'), ib = el('input'), out = el('div');
-    for (const [inp, v] of [[ia, 5], [ib, 121]]) { inp.type = 'number'; inp.min = 1; inp.max = 500; inp.value = v; }
+    for (const [inp, v] of [[ia, a0 || 5], [ib, b0 || 121]]) { inp.type = 'number'; inp.min = 1; inp.max = 500; inp.value = v; }
     row.append(document.createTextNode('Pour '), ia, document.createTextNode(' / '), ib, document.createTextNode('  greedily: always the biggest cup that fits'));
     box.append(row, out);
     function draw() {
-      const a0 = parseInt(ia.value, 10), b0 = parseInt(ib.value, 10);
+      const a1 = parseInt(ia.value, 10), b1 = parseInt(ib.value, 10);
       out.replaceChildren();
-      if (!(a0 >= 1 && a0 < b0 && b0 <= 500)) { out.append(el('p', 'muted', 'Choose whole numbers with 1 ≤ a < b ≤ 500.')); return; }
-      let A = BigInt(a0), C = BigInt(b0); const steps = [];
+      if (!(a1 >= 1 && a1 < b1 && b1 <= 500)) { out.append(el('p', 'muted', 'Choose whole numbers with 1 ≤ a < b ≤ 500.')); return; }
+      let A = BigInt(a1), C = BigInt(b1); const steps = [];
       while (A > 0n && steps.length < 12) { const z = (C + A - 1n) / A; steps.push({ z, C }); const nA = A * z - C, nC = C * z, g = gcd(nA, nC) || 1n; A = nA / g; C = nC / g; }
       const maxDigits = Math.max(...steps.map((s) => s.z.toString().length));
       const s = svg('svg', { viewBox: '0 0 600 ' + (steps.length * 26 + 8), role: 'img' });
@@ -262,7 +263,7 @@
         s.append(svg('rect', { x: 50, y: i * 26 + 5, width: w, height: 17, rx: 3, fill: 'var(--warn)' }));
         s.append(svg('text', { x: 58 + w, y: i * 26 + 18, 'font-size': 12, fill: 'var(--ink)' }, '1/' + (zs.length > 16 ? zs.slice(0, 6) + '…' + zs.slice(-3) + ' (' + zs.length + ' digits)' : zs)));
       });
-      const best = b0 <= 200 ? shortest(a0, b0) : null;
+      const best = b1 <= 200 ? shortest(a1, b1) : null;
       out.append(s, el('p', null, 'Greedy: ' + steps.length + (A > 0n ? '+' : '') + ' cups, denominators roughly squaring each step.' +
         (best ? ' Fewest possible: ' + best.length + '.' : '')));
     }
@@ -300,8 +301,8 @@
     if (note && !note.error) { const box = el('div', 'plain'), l = el('span', 'lbl', 'In plain words'); l.append(by('Agent37')); box.append(l, paragraphs(tidyModel(note.role))); p.append(box); }
     p.append(el('span', 'lbl', 'The paper says'), paragraphs(n.statement));
 
-    if (label === card.root && card.explore) p.append(fold('See it with numbers', by('exact', true), visual, true));
-    if (label === 'lem:greedy') p.append(fold('See it with numbers', by('exact', true), greedyVisual, true));
+    if (label === card.root && card.explore) p.append(fold('See it with numbers', by('exact', true), () => visual(), true));
+    if (label === 'lem:greedy') p.append(fold('See it with numbers', by('exact', true), () => greedyVisual(), true));
     if (isNeeded) p.append(fold('Where this sits in the argument', null, () => treeVisual(label), label !== card.root));
     if (n.proof) p.append(fold('Proof (' + n.proof.split(/\s+/).length.toLocaleString() + ' words)', null, () => paragraphs(n.proof)));
     if (note && !note.error && note.checks.length) p.append(fold('What to check here (' + note.checks.length + ')', by('Agent37'), () => {
@@ -345,7 +346,7 @@
     const label = order[at], box = $('msgs'), log = chats.get(label) || [];
     box.replaceChildren();
     if (!log.length) box.append(el('p', 'hint', 'Ask about this step, or have the agent test it by running code.'));
-    for (const m of log) { const d = el('div', 'msg ' + m.who); d.append(m.who === 'you' ? el('p', null, m.text) : rich(m.text)); if (m.ran) d.append(el('p', 'muted', 'Run in the agent’s Agent37 sandbox; output as it reported.')); box.append(d); }
+    for (const m of log) { const d = el('div', 'msg ' + m.who); if (m.spec) { d.append(paragraphs(tidyModel(m.spec.caption))); if (m.spec.picture !== 'none') d.append(m.spec.picture === 'greedy' ? greedyVisual(m.spec.a, m.spec.b) : visual(m.spec.a, m.spec.b, true), el('p', 'muted', 'Picture and fraction chosen by the agent; drawn exactly by the page.')); } else d.append(m.who === 'you' ? el('p', null, m.text) : rich(m.text)); if (m.ran) d.append(el('p', 'muted', 'Run in the agent’s Agent37 sandbox; output as it reported.')); box.append(d); }
     typeset(box);
     box.scrollTop = box.scrollHeight;
   }
@@ -361,14 +362,14 @@
     if (!question || busy) return;
     const label = order[at], log = chats.get(label) || [];
     chats.set(label, log);
-    log.push({ who: 'you', text: question }, { who: 'bot', text: mode === 'test' ? 'Writing a test and running it on Agent37. This takes about half a minute…' : 'Thinking…' });
+    log.push({ who: 'you', text: question }, { who: 'bot', text: mode === 'test' ? 'Writing a test and running it on Agent37. This takes about half a minute…' : mode === 'show' ? 'Choosing a picture for this step…' : 'Thinking…' });
     busy = true; $('send').disabled = true; $('q').value = '';
     renderChat();
     let reply = { who: 'bot err', text: 'The copilot is not reachable. Start it with: python -m agent.server' };
     try {
       const res = await fetch('/api/ask', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ label, question, mode: mode || 'ask' }) });
       const data = await res.json();
-      reply = data.success ? { who: 'bot', text: data.data.answer, ran: mode === 'test' } : { who: 'bot err', text: data.error || 'Something went wrong.' };
+      reply = data.success ? { who: 'bot', text: data.data.answer, ran: mode === 'test', spec: data.data.spec } : { who: 'bot err', text: data.error || 'Something went wrong.' };
     } catch (e) { /* keep the unreachable message */ }
     log[log.length - 1] = reply;
     busy = false; $('send').disabled = false;
@@ -376,6 +377,7 @@
   }
   $('ask').onsubmit = (e) => { e.preventDefault(); ask($('q').value); };
   { const b = el('button', null, '▶ Test this step by experiment'); b.type = 'button'; b.title = 'The agent writes a script and runs it in its Agent37 cloud sandbox'; b.style.borderColor = 'var(--spine)'; b.style.color = 'var(--spine)'; b.onclick = () => ask('Test this step on small cases.', 'test'); $('quick').append(b); }
+  { const b = el('button', null, '◐ Show me a picture'); b.type = 'button'; b.style.borderColor = 'var(--spine)'; b.style.color = 'var(--spine)'; b.onclick = () => ask('Show me a picture for this step.', 'show'); $('quick').append(b); }
   for (const q of ['Explain this step simply', 'Why is this needed?', 'Give a small example', 'What could go wrong here?']) { const b = el('button', null, q); b.type = 'button'; b.onclick = () => ask(q); $('quick').append(b); }
 
   // ---- navigation

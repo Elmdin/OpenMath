@@ -49,7 +49,8 @@ https://github.com/Elmdin/OpenMath
 - Agent37 Cloud API: the worker, used four ways. We create a hosted Hermes instance through
   `POST /v1/instances`, wait on `/v1/health`, and call `POST /v1/responses` on it for: (1) the
   statement audit and its self-evaluation, 7 turns per paper; (2) a reviewer's note for each of
-  the 19 results; (3) the live copilot chat, with the step on screen as context; (4) experiments,
+  the 19 results; (3) the live copilot chat, with the step on screen as context, including picking a picture
+  and its inputs from a fixed library for the page to draw; (4) experiments,
   where the agent writes a Python test and runs it in its own cloud sandbox. Code:
   `agent/agent37.py`, `agent/notes.py`, `agent/server.py`.
 - Supabase: every finished card, with its audit, self-evaluation and prior-work results, is
@@ -58,8 +59,9 @@ https://github.com/Elmdin/OpenMath
 - Monid: prior-work search. The agent calls Monid's `/v1/run` (routed to Exa) with a query
   built from the paper's title and abstract, then cross-checks the hits against the paper's
   bibliography. Code: `agent/priorwork.py`.
-- OpenAI: an alternative audit model (gpt-5.5) behind the same interface, used for our first
-  evaluation runs. Code: `agent/openai_model.py`; run with `python -m agent.run ... openai`.
+- OpenAI: every agent turn above runs on an OpenAI model. Agent37's usage report shows our
+  instance's managed model is `openai/gpt-6-luna`. We also call the OpenAI API directly as an
+  alternative audit model (gpt-5.5) behind the same interface, used for our first evaluation runs. Code: `agent/openai_model.py`; run with `python -m agent.run ... openai`.
 - InstaCloud: not used.
 
 ## Checklist before submitting
