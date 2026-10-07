@@ -23,6 +23,8 @@ def run(paper_dir, title, provider, web_dir="web"):
                              priorwork.bib_titles(tex_dir))
     Path(web_dir, "prior.js").write_text("window.PRIOR = " + json.dumps(prior, indent=1) + ";\n", encoding="utf-8")
     row = publish.publish(title, {"card": card, "audit": audit, "prior_work": prior})
+    Path(web_dir, "run.js").write_text("window.RUN = " + json.dumps({"row_id": row.get("id"), "provider": provider}) + ";\n",
+                                       encoding="utf-8")
     return {"row_id": row.get("id"), "prior_hits": len(prior["hits"]),
             "prior_uncited": sum(not h["cited_by_paper"] for h in prior["hits"]), "caught": audit["caught"], "total": audit["total"],
             "controls_clean": audit["controls_clean"], "controls": audit["controls"], "seconds": audit["seconds"]}

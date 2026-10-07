@@ -39,7 +39,8 @@ def _explore(b_max):
     for row in rows:
         if not firsts or row["worst"] > firsts[-1]["worst"]:
             firsts.append({**row, "loglog": round(math.log(math.log(row["b"])), 3) if row["b"] > 2 else None})
-    return {"b_max": b_max, "cases": sum(row["cases"] for row in rows), "firsts": firsts}
+    return {"b_max": b_max, "cases": sum(row["cases"] for row in rows), "firsts": firsts,
+            "series": [[row["b"], row["worst"]] for row in rows]}
 
 
 def build_card(paper_dir, root, example, explore_b_max=200):

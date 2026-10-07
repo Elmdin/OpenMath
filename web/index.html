@@ -45,6 +45,7 @@
   .tile .q { color:var(--muted); font-size:.9rem; }
   .tile .a { font-size:1.35rem; font-weight:650; margin:4px 0 2px; }
   .tile .d { font-size:.9rem; }
+  .tile .src { margin-top:8px; font-size:.68rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--spine); }
   details > summary { cursor:pointer; list-style:none; }
   details > summary::-webkit-details-marker { display:none; }
   details > summary h2 { display:inline; margin:0; }
@@ -75,8 +76,9 @@
       Before trusting it, a reviewer still has to answer these questions by hand. Our agent answered them in <span id="secs">seconds</span>.</p>
     <div class="tiles" id="tiles"></div>
     <p class="note">Still yours to judge: is the result new, and does it matter. The agent gives no verdict on the paper.</p>
-    <p style="margin:14px 0 0"><a href="reader.html" style="font-weight:600">Read the paper with the copilot →</a>
-      <span class="note" style="margin-left:6px">a side panel follows the result you are on</span></p>
+    <p class="note" id="saved"></p>
+    <p style="margin:14px 0 0"><a href="reader.html" style="font-weight:600">Review the paper with the copilot →</a>
+      <span class="note" style="margin-left:6px">a guided path through the proof, with notes and visuals beside each step</span></p>
   </section>
   <p class="sub" style="margin:22px 0 10px">The evidence behind each answer (click to open):</p>
 
@@ -138,6 +140,7 @@
 <script src="card.js"></script>
 <script src="audit.js"></script>
 <script src="prior.js"></script>
+<script src="run.js"></script>
 <script>
 (function () {
   const card = window.CARD;
@@ -229,24 +232,26 @@
   const tiles = [
     { to: 'audit-section', q: 'Does the computer-checked statement say the same thing as the paper?',
       a: au ? (mism === 0 ? 'No mismatches found' : mism + ' mismatch' + (mism > 1 ? 'es' : '') + ' flagged') : 'Not checked yet',
-      d: au ? 'We planted ' + au.total + ' errors to test the agent: it caught ' + au.caught + '.' : 'Run the audit to fill this in.' },
+      d: au ? 'We planted ' + au.total + ' errors to test the agent: it caught ' + au.caught + '.' : 'Run the audit to fill this in.', src: 'Agent37 hosted agent' },
     { to: 'map-section', q: 'How much of the paper do I need to read?',
       a: card.spine.length + ' of ' + nodes.size + ' results',
-      d: 'The other ' + (nodes.size - card.spine.length) + ' only support side results.' },
+      d: 'The other ' + (nodes.size - card.spine.length) + ' only support side results.', src: 'Parsed in code, no model' },
     { to: 'prior-section', q: 'Did it miss earlier work?',
       a: uncited == null ? 'Not searched yet' : uncited + ' of ' + window.PRIOR.hits.length + ' related papers not cited',
-      d: 'Worth a look. They may or may not matter.' },
+      d: 'Worth a look. They may or may not matter.', src: 'Monid search (Exa)' },
     { to: 'cases-section', q: 'Does the claim hold up on real numbers?',
       a: ex.cases.toLocaleString() + ' cases checked',
-      d: 'Exact arithmetic. None needs more than ' + ex.firsts[ex.firsts.length - 1].worst + ' terms, as the theorem predicts.' },
+      d: 'Exact arithmetic. None needs more than ' + ex.firsts[ex.firsts.length - 1].worst + ' terms, as the theorem predicts.', src: 'Computed in code, no model' },
   ];
   for (const t of tiles) {
     const b = el('button', 'tile');
     b.append(el('div', 'q', t.q), el('div', 'a', t.a), el('div', 'd', t.d));
+    b.append(el('div', 'src', t.src));
     b.onclick = () => { const s = $(t.to); const d = s && s.querySelector('details'); if (d) { d.open = true; s.scrollIntoView({ behavior: 'smooth' }); } };
     $('tiles').append(b);
   }
   if (au) $('secs').textContent = Math.round(au.seconds) + ' seconds';
+  if (window.RUN) $('saved').textContent = 'This review is saved to Supabase as row ' + window.RUN.row_id + ' of the papers feed.';
 
   // Proof map
   const roots = card.map.nodes.filter((n) => n.kind === 'theorem' || n.kind === 'corollary');

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenMath reading copilot</title>
+<title>OpenMath review copilot</title>
 <style>
   :root { --bg:#fbfaf7; --ink:#1c1b19; --muted:#6b675f; --line:#dedad0; --card:#fff;
           --ok:#1f7a4d; --warn:#9a6200; --bad:#a3312b; --spine:#1d4f91; --spine-bg:#e8f0fb; }
@@ -13,102 +13,254 @@
   }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 system-ui, sans-serif; }
-  header { padding:14px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
+  header { padding:12px 16px; border-bottom:1px solid var(--line); display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
   header h1 { font-size:1.1rem; margin:0; }
   header a { color:var(--spine); font-size:.9rem; }
-  .layout { display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:20px; max-width:1200px; margin:0 auto; padding:16px; }
+  .modes { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .modes button { font:inherit; font-size:.9rem; padding:5px 12px; border:0; background:transparent; color:var(--muted); cursor:pointer; }
+  .modes button.on { background:var(--spine-bg); color:var(--spine); font-weight:600; }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:20px; max-width:1240px; margin:0 auto; padding:16px; }
   @media (max-width:900px) { .layout { grid-template-columns:1fr; } aside { position:static !important; max-height:none !important; } }
-  article { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:14px;
-            border-left:4px solid var(--line); transition:border-color .15s, opacity .15s; opacity:.72; overflow-x:auto; }
+  .intro { color:var(--muted); margin:0 0 14px; }
+  h2.sec { font-size:1.05rem; margin:26px 0 10px; padding-top:10px; border-top:1px solid var(--line); }
+  .prose { color:var(--muted); font-size:.95rem; margin:0 0 12px; overflow-x:auto; }
+  .prose p, .body p { margin:0 0 10px; }
+  article { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 18px; margin-bottom:14px;
+            border-left:4px solid var(--line); overflow-x:auto; }
   article.needed { border-left-color:var(--spine); }
-  article.active { opacity:1; box-shadow:0 0 0 2px var(--spine); }
-  article .head { font-size:.82rem; color:var(--muted); margin-bottom:6px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  article.active { box-shadow:0 0 0 2px var(--spine); }
+  article.done { opacity:.6; }
+  article .head { font-size:.82rem; color:var(--muted); margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  article .step { font-weight:700; color:var(--spine); }
   article .kind { text-transform:capitalize; font-weight:600; color:var(--ink); }
+  article label.rev { margin-left:auto; cursor:pointer; color:var(--ink); }
   .tag { font-size:.7rem; font-weight:600; letter-spacing:.03em; text-transform:uppercase; padding:1px 7px; border-radius:99px; border:1px solid currentColor; }
-  .t-need { color:var(--spine); } .t-skip { color:var(--muted); } .t-ok { color:var(--ok); } .t-warn { color:var(--warn); }
+  .t-need { color:var(--spine); } .t-skip { color:var(--muted); } .t-warn { color:var(--warn); }
+  details.proof { margin-top:10px; border-top:1px dashed var(--line); padding-top:8px; }
+  details > summary { cursor:pointer; color:var(--spine); font-size:.9rem; }
+  details.fold { margin:20px 0; }
+  details.fold > summary { font-size:1rem; font-weight:600; color:var(--ink); margin-bottom:12px; }
   aside { position:sticky; top:12px; align-self:start; max-height:calc(100vh - 24px); overflow:auto;
           background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
-  aside h2 { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:16px 0 6px; }
-  aside h2:first-child { margin-top:0; }
-  .big { font-size:1.15rem; font-weight:650; margin:0 0 4px; }
-  .why { color:var(--muted); font-size:.9rem; margin:0; }
+  aside h3 { font-size:.78rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin:16px 0 6px; }
+  aside h3:first-child { margin-top:0; }
+  .big { font-size:1.12rem; font-weight:650; margin:0 0 4px; }
+  .why { color:var(--muted); font-size:.9rem; margin:0 0 6px; }
   button.chip { font:12.5px ui-monospace, Menlo, monospace; padding:3px 9px; margin:0 6px 6px 0; border-radius:6px; cursor:pointer;
                 border:1px solid var(--spine); background:var(--spine-bg); color:var(--spine); }
   button.chip.off { border-color:var(--line); background:transparent; color:var(--muted); }
-  .none { color:var(--muted); font-size:.9rem; }
-  pre { margin:0; padding:10px; background:var(--bg); border:1px solid var(--line); border-radius:8px; overflow-x:auto;
+  pre { margin:0 0 8px; padding:10px; background:var(--bg); border:1px solid var(--line); border-radius:8px; overflow-x:auto;
         font:12px/1.45 ui-monospace, Menlo, monospace; white-space:pre-wrap; }
+  .check { border-left:3px solid var(--spine); padding:4px 0 4px 10px; margin:8px 0; font-size:.92rem; }
+  .check .q { color:var(--muted); font:11.5px/1.4 ui-monospace, Menlo, monospace; white-space:pre-wrap; margin-top:3px; }
   .flag { border-left:3px solid var(--warn); padding:4px 0 4px 10px; margin:8px 0; font-size:.9rem; }
   .flag.mismatch { border-left-color:var(--bad); }
+  .viz { margin-top:12px; border-top:1px dashed var(--line); padding-top:12px; }
+  .viz h4 { margin:0 0 6px; font-size:.95rem; }
+  .viz input { width:70px; font:inherit; padding:2px 6px; background:var(--bg); color:var(--ink); border:1px solid var(--line); border-radius:6px; }
+  .viz svg { display:block; width:100%; height:auto; margin:8px 0; }
+  .viz .eq { font-variant-numeric:tabular-nums; }
+  .by { font-size:.68rem; font-weight:600; letter-spacing:.03em; text-transform:uppercase; padding:1px 7px; border-radius:99px;
+        background:var(--spine-bg); color:var(--spine); margin-left:6px; vertical-align:middle; white-space:nowrap; }
+  .by.code { background:transparent; border:1px solid var(--line); color:var(--muted); }
   .bar { height:8px; border-radius:99px; background:var(--line); overflow:hidden; margin-top:6px; }
-  .bar > div { height:100%; background:var(--spine); width:0; transition:width .2s; }
+  .bar > div { height:100%; background:var(--ok); width:0; transition:width .2s; }
 </style>
 <script>
-  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], macros: { N: '\\mathbb N', Z: '\\mathbb Z', R: '\\mathbb R', E: '\\mathbb E', Prob: '\\mathbb P', e: '\\mathrm e' } } };
+  window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']],
+    macros: { N: '\\mathbb N', Z: '\\mathbb Z', R: '\\mathbb R', E: '\\mathbb E', Prob: '\\mathbb P', e: '\\mathrm e' } } };
 </script>
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
 </head>
 <body>
 <header>
-  <h1>Reading copilot · <span id="paper"></span></h1>
-  <span style="color:var(--muted); font-size:.9rem">Scroll the paper's results. The panel follows the one you are on.</span>
-  <a href="index.html">← back to the review card</a>
+  <h1>Review copilot · <span id="paper"></span></h1>
+  <span class="modes"><button id="m-path" class="on">Review path</button><button id="m-paper">Whole paper</button></span>
+  <a href="index.html">← summary card</a>
 </header>
 <div class="layout">
-  <main id="results"></main>
+  <main id="content"></main>
   <aside id="panel"></aside>
 </div>
 <script src="card.js"></script>
 <script src="audit.js"></script>
+<script src="notes.js"></script>
 <script>
 (function () {
-  const card = window.CARD, au = window.AUDIT;
+  const card = window.CARD, au = window.AUDIT, notes = (window.NOTES && window.NOTES.notes) || null;
   const $ = (id) => document.getElementById(id);
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-  if (!card) { $('results').textContent = 'card.js is missing. Run the agent first.'; return; }
+  if (!card) { $('content').textContent = 'card.js is missing. Run the agent first.'; return; }
   $('paper').textContent = card.paper;
 
   const nodes = new Map(card.map.nodes.map((n) => [n.label, n]));
   const needed = new Set(card.spine);
   const usedBy = new Map(card.map.nodes.map((n) => [n.label, []]));
   for (const n of card.map.nodes) for (const d of n.deps) usedBy.get(d).push(n.label);
-  const seen = new Set();
-  const articles = new Map();
-
-  // Which headline result does a skippable lemma serve? (first theorem/corollary that reaches it)
-  function serves(label) {
-    const out = [];
-    for (const r of card.map.nodes.filter((n) => n.kind === 'theorem' || n.kind === 'corollary')) {
-      const stack = [r.label], visited = new Set();
-      while (stack.length) {
-        const x = stack.pop();
-        if (visited.has(x)) continue;
-        visited.add(x);
-        stack.push(...nodes.get(x).deps);
-      }
-      if (visited.has(label) && r.label !== label) out.push(r.label);
-    }
-    return out;
-  }
-
-  for (const n of card.map.nodes) {
-    const a = el('article', needed.has(n.label) ? 'needed' : '');
-    a.dataset.label = n.label;
-    const head = el('div', 'head');
-    head.append(el('span', 'kind', n.kind), el('span', null, n.label + (n.title ? ' · ' + n.title : '')),
-      el('span', 'tag ' + (needed.has(n.label) ? 't-need' : 't-skip'), needed.has(n.label) ? 'needed for main theorem' : 'skippable'));
-    a.append(head, el('div', null, n.statement));
-    $('results').append(a);
-    articles.set(n.label, a);
-  }
   const typeset = (node) => { if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise([node]).catch(() => {}); };
+
+  // Reviewed ticks are a per-reader convenience; the page works without storage.
+  const KEY = 'openmath-reviewed-' + card.paper;
+  let reviewed = new Set();
+  try { reviewed = new Set(JSON.parse(localStorage.getItem(KEY) || '[]')); } catch (e) { /* storage unavailable */ }
+  const saveReviewed = () => { try { localStorage.setItem(KEY, JSON.stringify([...reviewed])); } catch (e) { /* storage unavailable */ } };
+
+  // Light LaTeX-to-text cleanup for prose; maths is left for MathJax.
+  function clean(tex) {
+    return tex
+      .replace(/\\label\{[^}]*\}/g, '')
+      .replace(/\\cite(?:\[[^\]]*\])?\{([^}]*)\}/g, '[$1]')
+      .replace(/\\eqref\{([^}]*)\}/g, '($1)')
+      .replace(/\\(?:c|C|auto)?ref\{([^}]*)\}/g, '$1')
+      .replace(/\\(?:emph|textit|textbf|textup|textrm)\{([^{}]*)\}/g, '$1')
+      .replace(/\\(?:begin|end)\{(?:itemize|enumerate)\}(?:\[[^\]]*\])?/g, '')
+      .replace(/\\item\b/g, '\n\n• ')
+      .replace(/\\(?:noindent|medskip|smallskip|bigskip|qedhere|par)\b/g, '')
+      .replace(/~/g, ' ');
+  }
+  function paragraphs(tex, cls) {
+    const box = el('div', cls);
+    for (const part of clean(tex).split(/\n\s*\n/)) if (part.trim()) box.append(el('p', null, part.trim()));
+    return box;
+  }
+  const words = (tex) => tex.split(/\s+/).filter(Boolean).length;
+
+  const SVG = 'http://www.w3.org/2000/svg';
+  const svg = (tag, attrs, text) => { const e = document.createElementNS(SVG, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; };
+  const by = (name, code) => el('span', 'by' + (code ? ' code' : ''), name);
+
+  // Exact shortest expansion, same search as agent/explore.py, in BigInt.
+  const gcd = (a, b) => { while (b) [a, b] = [b, a % b]; return a; };
+  function search(p, q, terms, lowest) {
+    if (terms === 1) return q % p === 0n && q / p >= lowest ? [q / p] : null;
+    let n = q / p + 1n; if (n < lowest) n = lowest;
+    const stop = BigInt(terms) * q / p;
+    for (; n <= stop; n++) {
+      const np = p * n - q, nq = q * n, g = gcd(np, nq);
+      const rest = search(np / g, nq / g, terms - 1, n + 1n);
+      if (rest) return [n].concat(rest);
+    }
+    return null;
+  }
+  function shortest(a, b) {
+    const g = gcd(BigInt(a), BigInt(b));
+    for (let t = 1; t <= 7; t++) { const r = search(BigInt(a) / g, BigInt(b) / g, t, 2n); if (r) return r; }
+    return null;
+  }
+
+  function visual() {
+    const ex = card.explore, box = el('div', 'viz');
+    const h = el('h4', null, 'See it: pour any fraction using each cup size once');
+    h.append(by('computed in your browser, exact', true));
+    const row = el('div'), ia = el('input'), ib = el('input');
+    for (const [inp, v] of [[ia, 77], [ib, 79]]) { inp.type = 'number'; inp.min = 1; inp.max = ex.b_max; inp.value = v; }
+    row.append(document.createTextNode('Fill a glass to '), ia, document.createTextNode(' / '), ib,
+      document.createTextNode('  using cups of size 1/2, 1/3, 1/4, …'));
+    const glass = svg('svg', { viewBox: '0 0 600 64', role: 'img' }), eq = el('div', 'eq');
+    const h2 = el('h4', null, 'Hardest fraction for each denominator b');
+    h2.append(by('19,900 cases, computed by the agent in code', true));
+    const chart = svg('svg', { viewBox: '0 0 600 170', role: 'img' });
+    const cap = el('p', 'why', 'Each dot is one denominator b: the most cups any fraction a/b needs. The theorem says this grows like log log b, which is why the dots barely climb.');
+    box.append(h, row, glass, eq, h2, chart, cap);
+
+    const max = Math.max(...ex.series.map((s) => s[1]));
+    const X = (b) => 34 + (b - 2) * (556 / (ex.b_max - 2)), Y = (k) => 150 - k * (130 / max);
+    function drawChart(bSel) {
+      chart.replaceChildren();
+      for (let k = 1; k <= max; k++) {
+        chart.append(svg('line', { x1: 34, x2: 590, y1: Y(k), y2: Y(k), stroke: 'var(--line)', 'stroke-width': 1 }));
+        chart.append(svg('text', { x: 26, y: Y(k) + 4, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)' }, k));
+      }
+      for (const b of [2, 50, 100, 150, 200]) chart.append(svg('text', { x: X(b), y: 166, 'text-anchor': 'middle', 'font-size': 11, fill: 'var(--muted)' }, 'b=' + b));
+      for (const [b, k] of ex.series) chart.append(svg('circle', { cx: X(b), cy: Y(k), r: b === bSel ? 5 : 2.2, fill: b === bSel ? 'var(--warn)' : 'var(--spine)' }));
+    }
+    const palette = ['#1d4f91', '#3f7fc4', '#7fb0e6', '#b9792b', '#d9a45a', '#8a5aa8', '#b790cf'];
+    function draw() {
+      const a = parseInt(ia.value, 10), b = parseInt(ib.value, 10);
+      glass.replaceChildren();
+      if (!(a >= 1 && b <= ex.b_max && a < b)) { eq.textContent = 'Choose whole numbers with 1 ≤ a < b ≤ ' + ex.b_max + '.'; drawChart(null); return; }
+      const ns = shortest(a, b);
+      if (!ns) { eq.textContent = 'No expansion with at most 7 cups found.'; drawChart(b); return; }
+      glass.append(svg('rect', { x: 0, y: 8, width: 600, height: 34, fill: 'none', stroke: 'var(--line)' }));
+      let x = 0;
+      ns.forEach((n, i) => {
+        const wdt = 600 / Number(n);
+        glass.append(svg('rect', { x: x, y: 8, width: Math.max(wdt, 0.6), height: 34, fill: palette[i % palette.length] }));
+        if (wdt > 26) glass.append(svg('text', { x: x + wdt / 2, y: 30, 'text-anchor': 'middle', 'font-size': 13, fill: '#fff' }, '1/' + n));
+        x += wdt;
+      });
+      const mark = 600 * a / b;
+      glass.append(svg('line', { x1: mark, x2: mark, y1: 2, y2: 48, stroke: 'var(--warn)', 'stroke-width': 2 }));
+      glass.append(svg('text', { x: Math.min(mark, 575), y: 60, 'text-anchor': 'middle', 'font-size': 12, fill: 'var(--warn)' }, a + '/' + b));
+      if (mark < 470) glass.append(svg('text', { x: 598, y: 60, 'text-anchor': 'end', 'font-size': 11, fill: 'var(--muted)' }, 'full glass = 1'));
+      eq.textContent = a + '/' + b + ' = ' + ns.map((n) => '1/' + n).join(' + ') + '   →  ' + ns.length + ' cup' + (ns.length > 1 ? 's' : '') + ', and no shorter way exists.';
+      drawChart(b);
+    }
+    ia.oninput = draw; ib.oninput = draw;
+    draw();
+    return box;
+  }
+
+  const articles = new Map();
+  function resultCard(label, step, total) {
+    const n = nodes.get(label);
+    const a = el('article', (needed.has(label) ? 'needed' : '') + (reviewed.has(label) ? ' done' : ''));
+    a.dataset.label = label;
+    const head = el('div', 'head');
+    if (step) head.append(el('span', 'step', 'Step ' + step + ' of ' + total));
+    head.append(el('span', 'kind', n.kind), el('span', null, label + (n.title ? ' · ' + n.title : '')),
+      el('span', 'tag ' + (needed.has(label) ? 't-need' : 't-skip'), needed.has(label) ? 'needed' : 'skippable'));
+    const rev = el('label', 'rev'), box = el('input');
+    box.type = 'checkbox';
+    box.checked = reviewed.has(label);
+    box.onchange = () => { box.checked ? reviewed.add(label) : reviewed.delete(label); saveReviewed(); a.classList.toggle('done', box.checked); active = null; track(); };
+    rev.append(box, document.createTextNode(' reviewed'));
+    head.append(rev);
+    a.append(head, paragraphs(n.statement, 'body'));
+    if (n.proof) {
+      const d = el('details', 'proof'), s = el('summary', null, 'Read the proof (' + words(n.proof).toLocaleString() + ' words)');
+      d.append(s);
+      d.addEventListener('toggle', () => { if (d.open && d.childElementCount === 1) { const p = paragraphs(n.proof, 'body'); d.append(p); typeset(p); } });
+      a.append(d);
+    }
+    if (label === card.root && card.explore) a.append(visual());
+    articles.set(label, a);
+    return a;
+  }
+
+  function renderPath() {
+    const c = $('content');
+    c.append(el('p', 'intro', 'The shortest route through the paper: the main theorem, then only the ' + (card.spine.length - 1) +
+      ' results it depends on, in the order the argument needs them. Tick each one off as you go.'));
+    card.spine.forEach((label, i) => c.append(resultCard(label, i + 1, card.spine.length)));
+    const rest = card.map.nodes.filter((n) => !needed.has(n.label));
+    if (rest.length) {
+      const d = el('details', 'fold');
+      d.append(el('summary', null, 'Not needed for the main theorem (' + rest.length + ' results)'));
+      for (const n of rest) d.append(resultCard(n.label));
+      c.append(d);
+    }
+  }
+
+  function renderPaper() {
+    const c = $('content');
+    c.append(el('p', 'intro', 'The whole paper in its own order: every section, result and proof.'));
+    const proofShown = new Set();
+    for (const b of card.map.flow) {
+      if (b.type === 'section') c.append(el('h2', 'sec', b.title));
+      else if (b.type === 'prose') c.append(paragraphs(b.tex, 'prose'));
+      else if (b.type === 'result' && b.label) { c.append(resultCard(b.label)); proofShown.add(b.label); }
+      else if (b.type === 'result') c.append(paragraphs(b.tex, 'prose'));
+      // proofs are shown inside their result's card
+    }
+  }
 
   function chips(labels) {
     const box = el('div');
-    if (!labels.length) { box.append(el('span', 'none', 'nothing')); return box; }
+    if (!labels.length) { box.append(el('span', 'why', 'nothing')); return box; }
     for (const l of labels) {
       const b = el('button', 'chip' + (needed.has(l) ? '' : ' off'), l);
-      b.onclick = () => articles.get(l).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      b.onclick = () => { const a = articles.get(l); if (!a) return; const fold = a.closest('details.fold'); if (fold) fold.open = true; a.scrollIntoView({ behavior: 'smooth', block: 'center' }); };
       box.append(b);
     }
     return box;
@@ -118,61 +270,82 @@
   function show(label) {
     if (label === active) return;
     active = label;
-    seen.add(label);
     for (const [l, a] of articles) a.classList.toggle('active', l === label);
     const n = nodes.get(label), p = $('panel'), isNeeded = needed.has(label);
     p.replaceChildren();
-    p.append(el('h2', null, 'You are on'), el('p', 'big', n.kind + ' ' + label));
+    p.append(el('h3', null, 'You are on'), el('p', 'big', n.kind + ' ' + label), el('p', 'why', n.section ? 'Section: ' + n.section : ''));
 
-    p.append(el('h2', null, 'Do I need this?'));
-    if (label === card.root) {
-      p.append(el('p', 'big', 'This is the main result'), el('p', 'why', 'Everything marked "needed" exists to prove this.'));
-    } else if (isNeeded) {
-      p.append(el('p', 'big', 'Yes'), el('p', 'why', 'The main theorem depends on it, through: ' + (usedBy.get(label).filter((x) => needed.has(x)).join(', ') || card.root) + '.'));
+    p.append(el('h3', null, 'Do I need this?'));
+    if (label === card.root) p.append(el('p', 'big', 'This is the main result'));
+    else if (isNeeded) p.append(el('p', 'big', 'Yes'), el('p', 'why', 'The main theorem reaches it through ' + (usedBy.get(label).filter((x) => needed.has(x)).join(', ') || card.root) + '.'));
+    else p.append(el('p', 'big', 'No, you can skip it'), el('p', 'why', 'The main theorem does not use it.'));
+
+    { const t = el('h3', null, 'Copilot notes'); t.append(by('Agent37')); p.append(t); }
+    const note = notes && notes[label];
+    if (note && !note.error) {
+      p.append(el('span', 'tag t-warn', 'model-written, quotes verified'), el('p', null, note.role));
+      if (note.checks.length) p.append(el('p', 'why', 'Worth checking in this step:'));
+      for (const ch of note.checks) { const d = el('div', 'check'); d.append(el('div', null, ch.point), el('div', 'q', ch.quote)); p.append(d); }
+      if (note.rejected) p.append(el('p', 'why', note.rejected + ' suggested point' + (note.rejected > 1 ? 's were' : ' was') + ' dropped: the quote was not in the text.'));
     } else {
-      const s = serves(label);
-      p.append(el('p', 'big', 'No, you can skip it'), el('p', 'why', 'It is not used by the main theorem. ' + (s.length ? 'It serves ' + s.join(', ') + '.' : (n.kind === 'corollary' ? 'It is a side result.' : ''))));
+      p.append(el('p', 'why', note && note.error ? 'The copilot could not review this result: ' + note.error : 'No notes generated yet. Run: python -m agent.notes'));
     }
 
-    p.append(el('h2', null, 'It relies on'), chips(n.deps), el('h2', null, 'It is used by'), chips(usedBy.get(label)));
+    { const t = el('h3', null, 'It relies on'); t.append(by('parsed from the paper', true)); p.append(t, chips(n.deps), el('h3', null, 'It is used by'), chips(usedBy.get(label))); }
 
-    p.append(el('h2', null, 'What was checked here'));
+    { const t = el('h3', null, 'Machine checks'); if (label === card.root) t.append(by('Agent37 audit')); p.append(t); }
     if (label === card.root && card.formal) {
-      p.append(el('p', 'why', 'A formal statement exists for this result. The source says it is proved; we did not rebuild the proof.'), el('pre', null, card.formal.theorem));
+      p.append(el('p', 'why', 'A formal statement exists. The source says it is proved; we did not rebuild the proof.'), el('pre', null, card.formal.theorem));
       if (au) {
         const mism = au.original.flags.filter((f) => f.severity === 'mismatch').length;
-        p.append(el('p', 'why', 'Audit against the text on the left (model-written, quotes verified): ' + mism + ' mismatches, ' + (au.original.flags.length - mism) + ' notes.'));
+        p.append(el('p', 'why', 'Audit of that statement against this theorem: ' + mism + ' mismatches, ' + (au.original.flags.length - mism) + ' notes.'));
         for (const f of au.original.flags) p.append(el('div', 'flag ' + f.severity, f.summary));
       }
     } else {
-      p.append(el('p', 'why', 'No separate formal statement was published for this result, so nothing here was machine-checked by us. Its place in the argument comes from the paper\'s own cross-references.'));
+      p.append(el('p', 'why', 'No separate formal statement was published for this result, so nothing here was machine-checked.'));
     }
 
-    const done = [...seen].filter((x) => needed.has(x)).length;
-    p.append(el('h2', null, 'Your progress'), el('p', 'why', 'Seen ' + done + ' of the ' + needed.size + ' results the main theorem needs.'));
+    const done = card.spine.filter((x) => reviewed.has(x)).length;
+    p.append(el('h3', null, 'Your review'), el('p', 'why', 'Reviewed ' + done + ' of the ' + card.spine.length + ' results the main theorem needs.'));
     const bar = el('div', 'bar'), fill = el('div');
-    fill.style.width = (100 * done / needed.size) + '%';
+    fill.style.width = (100 * done / card.spine.length) + '%';
     bar.append(fill);
     p.append(bar);
   }
 
-  // Follow the result closest to a line one third down the viewport.
+  // Follow the visible result closest to a line one third down the viewport.
   function track() {
-    if (window.scrollY < 10) { show(card.map.nodes[0].label); return; }
+    const visible = [...articles].filter(([, a]) => a.offsetParent !== null);
+    if (!visible.length) return;
+    if (window.scrollY < 10) { show(visible[0][0]); return; }
     const line = window.innerHeight / 3;
     let best = null, bestDist = Infinity;
-    for (const [label, a] of articles) {
+    for (const [label, a] of visible) {
       const r = a.getBoundingClientRect();
       const dist = r.top <= line && r.bottom >= line ? 0 : Math.min(Math.abs(r.top - line), Math.abs(r.bottom - line));
       if (dist < bestDist) { bestDist = dist; best = label; }
     }
-    if (best) show(best);
+    show(best);
   }
+
+  function setMode(mode) {
+    $('m-path').classList.toggle('on', mode === 'path');
+    $('m-paper').classList.toggle('on', mode === 'paper');
+    $('content').replaceChildren();
+    articles.clear();
+    active = null;
+    mode === 'path' ? renderPath() : renderPaper();
+    typeset($('content'));
+    window.scrollTo(0, 0);
+    track();
+  }
+  $('m-path').onclick = () => setMode('path');
+  $('m-paper').onclick = () => setMode('paper');
   let queued = false;
   window.addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; track(); }); } }, { passive: true });
   window.addEventListener('resize', track);
-  typeset($('results'));
-  track();
+  document.addEventListener('toggle', () => { active = null; track(); }, true);
+  setMode('path');
 })();
 </script>
 </body>

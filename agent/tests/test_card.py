@@ -17,6 +17,8 @@ def test_family_025_card():
     firsts = card["explore"]["firsts"]
     assert [(f["worst"], f["b"]) for f in firsts] == [(1, 2), (2, 3), (3, 5), (4, 11), (5, 17), (6, 79)]
     assert card["explore"]["cases"] == sum(range(1, 200))
+    series = card["explore"]["series"]
+    assert series[0] == [2, 1] and len(series) == 199 and max(w for _, w in series) == 6
 
 
 def test_failing_example_is_reported_not_raised():
