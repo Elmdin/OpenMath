@@ -44,6 +44,7 @@
   table { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; }
   th, td { text-align:left; padding:6px 10px 6px 0; border-top:1px solid var(--line); font-size:.92rem; }
   th { color:var(--muted); font-weight:500; border-top:0; }
+  a { color:var(--spine); }
 </style>
 <script>
   window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] }, options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] } };
@@ -85,6 +86,13 @@
     <p class="note">The model proposes flags; code keeps a flag only if both quotes occur verbatim in the paper and the Lean source. A flag is a prompt for a reader, not a finding.</p>
   </section>
 
+  <section id="prior-section" hidden>
+    <h2>Prior work <span class="rung r-warn">search results, unreviewed</span></h2>
+    <p class="sub" style="margin-bottom:10px" id="prior-sum"></p>
+    <table id="prior"><thead><tr><th>found by search</th><th>year</th><th>in the paper's bibliography?</th></tr></thead><tbody></tbody></table>
+    <p class="note">Search via Monid (Exa), query built from the paper's own title and abstract. "Not cited" means the title is absent from the bibliography; it does not mean the work is relevant or that it should have been cited.</p>
+  </section>
+
   <section>
     <h2>Worked example <span id="check-rung" class="rung"></span></h2>
     <div id="check" class="sum"></div>
@@ -111,6 +119,7 @@
 </main>
 <script src="card.js"></script>
 <script src="audit.js"></script>
+<script src="prior.js"></script>
 <script>
 (function () {
   const card = window.CARD;
@@ -167,6 +176,21 @@
       tr.append(el('td', null, r.description), el('td', null, r.is_defect ? 'defect' : 'control'), el('td', null, r.caught ? 'yes' : 'no'),
         el('td', good ? 'yes' : 'no', good ? 'correct' : (r.is_defect ? 'missed' : 'false alarm')));
       $('eval').tBodies[0].append(tr);
+    }
+  }
+
+  // Prior work (present only after a run with a Monid key)
+  const pr = window.PRIOR;
+  if (pr) {
+    $('prior-section').hidden = false;
+    const uncited = pr.hits.filter((x) => !x.cited_by_paper).length;
+    $('prior-sum').textContent = pr.hits.length + ' related papers found; ' + uncited + ' are not in the paper\'s bibliography.';
+    for (const hit of pr.hits) {
+      const tr = el('tr'), td = el('td'), link = el('a', null, hit.title);
+      if (hit.url && /^https?:\/\//.test(hit.url)) { link.href = hit.url; link.target = '_blank'; link.rel = 'noopener'; }
+      td.append(link);
+      tr.append(td, el('td', null, hit.year || '—'), el('td', hit.cited_by_paper ? 'yes' : null, hit.cited_by_paper ? 'cited' : 'not cited'));
+      $('prior').tBodies[0].append(tr);
     }
   }
 
