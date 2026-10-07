@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from agent.card import build_card
-from agent.server import MAX_QUESTION, build_prompt, parse_drawing, parse_spec
+from agent.server import MAX_QUESTION, build_prompt, parse_check, parse_drawing, parse_spec
 
 CARD = build_card(Path(__file__).resolve().parents[2] / "data" / "family-025", "thm:main",
                   {"a": 5, "b": 181, "denominators": [39, 507, 91767]})
@@ -67,6 +67,7 @@ def test_drawing_is_extracted_with_caption():
 
 @pytest.mark.parametrize("raw", ["FAILED: no sandbox", "<svg><script>alert(1)</script></svg>", '<svg onload="x()"></svg>',
                                  '<svg><image href="http://x/y.png"/></svg>', '<svg><a href="javascript:x">t</a></svg>',
+                                 '<svg><rect fill="url(http://x/y)"/></svg>',
                                  "<svg>" + "x" * 70_000 + "</svg>"])
 def test_unsafe_or_missing_drawings_are_rejected(raw):
     with pytest.raises(ValueError):
@@ -76,3 +77,22 @@ def test_unsafe_or_missing_drawings_are_rejected(raw):
 def test_draw_mode_asks_for_computed_svg_and_allows_3d():
     prompt = build_prompt(CARD, "thm:main", "Draw the number of terms for every a/b.", mode="draw")
     assert "isometric projection" in prompt and "Request: Draw the number of terms" in prompt
+
+
+def test_drawings_may_use_internal_references_and_styles():
+    out = parse_drawing('<svg><defs><linearGradient id="g"/></defs><style>text{fill:#222}</style><rect fill="url(#g)"/><use href="#g"/></svg>')
+    assert "url(#g)" in out["svg"]
+
+
+def test_check_keeps_only_steps_quoted_from_the_proof():
+    proof = "Subtracting 1/z leaves A'/C'. Thus the numerator never exceeds a."
+    raw = ('{"steps": [{"claim": "c1", "verdict": "follows", "why": "w", "quote": "Subtracting 1/z  leaves"},'
+           '{"claim": "c2", "verdict": "gap", "why": "w", "quote": "not in the proof"}], "overall": "ok"}')
+    review = parse_check(raw, proof)
+    assert [s["claim"] for s in review["steps"]] == ["c1"] and review["dropped"] == 1 and review["overall"] == "ok"
+
+
+@pytest.mark.parametrize("raw", ["nope", '{"steps": []}', '{"steps": [{"claim": "c", "verdict": "fine", "why": "w", "quote": "q"}]}'])
+def test_bad_checks_are_rejected(raw):
+    with pytest.raises(ValueError):
+        parse_check(raw, "q")

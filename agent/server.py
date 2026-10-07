@@ -12,7 +12,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from agent.agent37 import Agent37, Agent37Error, extract_json, load_env
-from agent import publish
+from agent import audit, publish
 from agent.card import build_card
 from agent.run import EXAMPLE
 
@@ -105,7 +105,8 @@ Rules for the SVG: viewBox="0 0 640 380"; first element a white background rect;
 (#222), font-size 12 or more, a title, labelled axes or a legend; at most 14 KB; no scripts, no
 event attributes, no foreignObject, no images, no links or external references. If the data is
 naturally three-dimensional (for example a value for every pair (a, b)), draw it in 3D as an
-isometric projection with depth-sorted bars or a surface; otherwise draw in 2D.
+isometric projection with depth-sorted bars or a surface; otherwise draw in 2D. Write the script
+once, run it once, and reply; do not iterate on the design.
 
 Reply in exactly this layout and nothing else:
 CAPTION: one or two plain sentences on what the picture shows and what to notice.
@@ -126,7 +127,8 @@ Proof (for the definitions it uses):
 
 MAX_SVG = 60_000
 _SVG = re.compile(r"<svg\b.*?</svg>", re.DOTALL | re.IGNORECASE)
-_UNSAFE_SVG = re.compile(r"<\s*(script|foreignObject|image|iframe|a|use|style)\b|\bon[a-z]+\s*=|javascript:|href\s*=|url\s*\(|<!ENTITY|<\?xml-stylesheet",
+# Drawings are shown through <img>, where scripts never run and nothing external loads; this is a second guard.
+_UNSAFE_SVG = re.compile(r"<\s*(script|foreignObject|iframe|image)\b|\bon[a-z]+\s*=|javascript:|href\s*=\s*[\"'](?!#)|url\s*\(\s*[\"']?(?!#)|<!ENTITY",
                          re.IGNORECASE)
 
 
@@ -144,6 +146,63 @@ def parse_drawing(raw):
         drawing = drawing.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"', 1)
     caption = re.search(r"CAPTION:\s*(.+?)(?:\n\s*SVG:|<svg)", raw, re.DOTALL)
     return {"svg": drawing, "caption": (caption.group(1).strip() if caption else "")[:500]}
+
+
+CHECK_PROMPT = """You are a careful referee reading the proof of one result in a machine-written paper. Go
+through the proof in order and split it into its main logical steps (at most 7). For each step
+decide whether it follows from what is stated before it, from the hypotheses, or from a result
+the proof cites.
+
+Reply with JSON only:
+{{"steps": [{{"claim": "<what this step asserts, one plain sentence>",
+            "verdict": "follows" | "needs_detail" | "gap",
+            "why": "<one sentence: the justification you found, or exactly what is missing>",
+            "quote": "<a short span copied exactly from the proof, at most 160 characters, where this step happens>"}}],
+ "overall": "<one sentence>"}}
+"follows": the justification is on the page. "needs_detail": plausible but the proof skips a
+computation or cites something without saying how it applies. "gap": you cannot see why it holds.
+Be strict and specific. Do not use tools. You are not certifying the proof; a clean result means
+you found no gap, not that none exists.
+
+Paper: {paper}
+{kind} {label}{title}
+It cites: {deps}
+
+Statement:
+{statement}
+
+Proof:
+{proof}
+
+{question}"""
+
+VERDICTS = ("follows", "needs_detail", "gap")
+
+
+def _squash(text):
+    """Compare quotes loosely: ignore whitespace, inline-math delimiters and doubled backslashes."""
+    return re.sub(r"\s+|\$|\\[()]", "", text.replace("\\\\", "\\"))
+
+
+def parse_check(raw, proof):
+    """Validate the referee pass; a step is kept only if its quote really occurs in the proof."""
+    try:
+        data = audit._loads(extract_json(raw))
+    except (Agent37Error, ValueError) as error:
+        raise ValueError(f"check is not JSON: {error}") from error
+    steps = data.get("steps") if isinstance(data, dict) else None
+    if not isinstance(steps, list) or not steps:
+        raise ValueError("no steps in the check")
+    proof_text, kept, dropped = _squash(proof), [], 0
+    for step in steps[:7]:
+        if not isinstance(step, dict) or step.get("verdict") not in VERDICTS or not all(
+                isinstance(step.get(k), str) and step[k].strip() for k in ("claim", "why", "quote")):
+            raise ValueError(f"malformed step: {str(step)[:120]}")
+        if _squash(step["quote"]) in proof_text:
+            kept.append({k: step[k].strip() for k in ("claim", "verdict", "why", "quote")})
+        else:
+            dropped += 1
+    return {"steps": kept, "dropped": dropped, "overall": str(data.get("overall") or "").strip()[:400]}
 
 
 PICTURES = ("shortest", "greedy", "none")
@@ -178,9 +237,10 @@ def build_prompt(card, label, question, mode="ask"):
     proof = node["proof"] or "(no proof text)"
     if len(proof) > MAX_PROOF_CHARS:
         proof = proof[:MAX_PROOF_CHARS] + "\n[proof truncated]"
-    if mode not in ("ask", "test", "show", "draw"):
+    templates = {"ask": PROMPT, "test": TEST_PROMPT, "show": SHOW_PROMPT, "draw": DRAW_PROMPT, "check": CHECK_PROMPT}
+    if mode not in templates:
         raise ValueError("unknown mode")
-    template = {"ask": PROMPT, "test": TEST_PROMPT, "show": SHOW_PROMPT, "draw": DRAW_PROMPT}[mode]
+    template = templates[mode]
     return template.format(paper=card["paper"], section=node["section"] or "(none)", kind=node["kind"].capitalize(),
                          label=label, title=f" ({node['title']})" if node["title"] else "",
                          deps=", ".join(node["deps"]) or "nothing else", statement=node["statement"],
@@ -238,6 +298,13 @@ class Handler(SimpleHTTPRequestHandler):
             except ValueError as error:
                 print(f"bad picture spec: {error}", file=sys.stderr)
                 return self._send(502, {"success": False, "data": None, "error": "the agent chose a picture we cannot draw; try again"})
+        if mode == "check":
+            node = next(n for n in self.card["map"]["nodes"] if n["label"] == body.get("label"))
+            try:
+                data = {**data, "review": parse_check(answer, node["proof"]), "answer": ""}
+            except ValueError as error:
+                print(f"bad check: {error}", file=sys.stderr)
+                return self._send(502, {"success": False, "data": None, "error": "the agent's check was not usable; try again"})
         if mode == "draw":
             try:
                 data = {**data, "drawing": parse_drawing(answer), "answer": ""}

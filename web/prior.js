@@ -14,14 +14,18 @@ window.PRIOR = {
    "url": "https://exa.ai/library/publication/cxqcr79nyfj",
    "author": null,
    "year": null,
-   "cited_by_paper": false
+   "cited_by_paper": false,
+   "relevance": "background",
+   "reason": "The title concerns unit-fraction representations of 1, a related special-value problem, but the title alone does not show that it addresses short representations of general a/b."
   },
   {
    "title": "On unit fractions with denominators in short intervals",
    "url": "https://exa.ai/library/publication/8xg2tpbn7pc",
    "author": null,
    "year": null,
-   "cited_by_paper": false
+   "cited_by_paper": false,
+   "relevance": "background",
+   "reason": "The title concerns unit fractions with restricted denominators, a related topic, but does not establish a connection to short representations of a/b."
   },
   {
    "title": "A question of Erd\\H{o}s and Graham on Egyptian fractions",
@@ -35,7 +39,9 @@ window.PRIOR = {
    "url": "https://exa.ai/library/publication/zvkp13nl0xv",
    "author": null,
    "year": null,
-   "cited_by_paper": false
+   "cited_by_paper": false,
+   "relevance": "background",
+   "reason": "The title indicates broader questions about unit fractions, but does not identify the paper\u2019s specific short-representation problem."
   },
   {
    "title": "A question of Erd\u0151s and Graham on Egyptian fractions",
@@ -49,14 +55,19 @@ window.PRIOR = {
    "url": "https://exa.ai/library/publication/8nr9zln6mcy",
    "author": null,
    "year": null,
-   "cited_by_paper": false
+   "cited_by_paper": false,
+   "relevance": "background",
+   "reason": "The title concerns which integers are representable as sums of unit fractions, a related but different question from short representations of rational numbers."
   },
   {
    "title": "Communications On distinct unit fractions whose sum equals 1",
    "url": "https://www.sciencedirect.com/science/article/pii/S0012365X05000889",
    "author": null,
    "year": null,
-   "cited_by_paper": false
+   "cited_by_paper": false,
+   "relevance": "background",
+   "reason": "The title concerns distinct unit fractions summing to 1, which is related but narrower than representing general a/b; the title alone does not show that the paper builds on it."
   }
- ]
+ ],
+ "assessed": true
 };

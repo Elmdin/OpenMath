@@ -28,6 +28,7 @@ def run(paper_dir, title, provider, web_dir="web"):
     env = {**load_env(Path(__file__).resolve().parents[2] / ".env"), **load_env()}
     prior = priorwork.search(priorwork.paper_query(tex_dir), env.get("MONID_API_KEY") or env.get("MONDI_API_KEY"),
                              priorwork.bib_titles(tex_dir))
+    prior = priorwork.assess(prior, run_audit.build_model(provider, None))
     Path(web_dir, "prior.js").write_text("window.PRIOR = " + json.dumps(prior, indent=1) + ";\n", encoding="utf-8")
     row = publish.publish(title, {"card": card, "audit": audit, "prior_work": prior, "notes": review})
     Path(web_dir, "run.js").write_text("window.RUN = " + json.dumps({"row_id": row.get("id"), "provider": provider}) + ";\n",

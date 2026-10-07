@@ -116,7 +116,7 @@
     <h2>Prior work <span class="rung r-warn">search results, unreviewed</span></h2>
     <p class="sub" style="margin-bottom:10px" id="prior-sum"></p>
     <table id="prior"><thead><tr><th>found by search</th><th>year</th><th>in the paper's bibliography?</th></tr></thead><tbody></tbody></table>
-    <p class="note">Search via Monid (Exa), query built from the paper's own title and abstract. "Not cited" means the title is absent from the bibliography; it does not mean the work is relevant or that it should have been cited.</p>
+    <p class="note">Search via Monid (Exa), query built from the paper's own title and abstract. "Not cited" means the title is absent from the bibliography. The relevance call is the agent's (Agent37), made from titles alone without reading the works, so treat it as a lead to follow up.</p>
   </section>
 
   <section>
@@ -217,7 +217,9 @@
       const tr = el('tr'), td = el('td'), link = el('a', null, hit.title);
       if (hit.url && /^https?:\/\//.test(hit.url)) { link.href = hit.url; link.target = '_blank'; link.rel = 'noopener'; }
       td.append(link);
-      tr.append(td, el('td', null, hit.year || '—'), el('td', hit.cited_by_paper ? 'yes' : null, hit.cited_by_paper ? 'cited' : 'not cited'));
+      const verdict = el('td', hit.cited_by_paper ? 'yes' : (hit.relevance === 'should_cite' ? 'no' : null), hit.cited_by_paper ? 'cited' : hit.relevance === 'should_cite' ? 'not cited · looks like it should be' : hit.relevance === 'background' ? 'not cited · background' : hit.relevance === 'unrelated' ? 'not cited · unrelated' : 'not cited');
+      if (hit.reason) verdict.append(el('div', 'note', hit.reason));
+      tr.append(td, el('td', null, hit.year || '—'), verdict);
       $('prior').tBodies[0].append(tr);
     }
   }
@@ -245,7 +247,7 @@
       d: 'The other ' + (nodes.size - card.spine.length) + ' only support side results.', src: 'Parsed in code, no model', pain: 'Reviewers are “drinking from a firehose”; Tao has asked for dependency graphs made from papers.' },
     { to: 'prior-section', q: 'Did it miss earlier work?',
       a: uncited == null ? 'Not searched yet' : uncited + ' of ' + window.PRIOR.hits.length + ' related papers not cited',
-      d: 'Worth a look. They may or may not matter.', src: 'Monid search (Exa)', pain: 'Results are released too fast to cite earlier work; authors report being left out.' },
+      d: window.PRIOR && window.PRIOR.assessed ? window.PRIOR.hits.filter((x) => x.relevance === 'should_cite').length + ' of them look like they should have been (judged from titles).' : 'Worth a look. They may or may not matter.', src: 'Monid search (Exa)', pain: 'Results are released too fast to cite earlier work; authors report being left out.' },
     { to: 'cases-section', q: 'Does the claim hold up on real numbers?',
       a: ex.cases.toLocaleString() + ' cases checked',
       d: 'Exact arithmetic. None needs more than ' + ex.firsts[ex.firsts.length - 1].worst + ' terms, as the theorem predicts.', src: 'Computed in code, no model', pain: 'Statements need “unit tests”; checking small cases by hand takes days.' },
