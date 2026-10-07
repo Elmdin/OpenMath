@@ -8,21 +8,21 @@ window.AUDIT = {
   "flags": [
    {
     "severity": "note",
-    "summary": "The Lean statement adds expansion existence for every natural-number pair with 1 ≤ a < b. This is an extra conjunct beyond the theorem environment; the paper mentions existence separately in the introduction.",
+    "summary": "The Lean theorem adds a global existence conjunct. This is stronger than the theorem environment requires; the paper does state existence in the preceding prose, outside that theorem.",
     "paper_quote": "The greedy algorithm shows that such expansions exist.",
-    "lean_quote": "∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns"
+    "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns) ∧"
    },
    {
     "severity": "note",
-    "summary": "The Lean definitions use `sInf` and finite-set `sup`, which are totalized (including on empty sets); on the theorem's range, the extra existence conjunct ensures the length sets are nonempty, and for b ≥ 2 the numerator range is nonempty. Thus these definitions give the paper's least length and maximum there. The maximum upper bound also entails the paper's stated upper bound for each numerator.",
-    "paper_quote": "For integers $1\\le a<b$, let $N(a,b)$ be the least $k$ for which",
+    "summary": "The definitions are totalized: `sInf` gives a natural-number value even when there is no expansion, and the finite supremum is also defined for an empty range. The added existence conjunct ensures `minLength` is the least expansion length on the numerator range used when b ≥ 2; that range is nonempty there, so the supremum matches the paper’s maximum.",
+    "paper_quote": "let N(a,b) be the least k",
     "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
    },
    {
     "severity": "note",
-    "summary": "The paper uses integers for a, b, and the threshold, while Lean uses naturals and requires b₀ ≥ 2. This is equivalent on the stated positive-integer domain: the threshold can be increased to at least 2. The real logarithm expression is the same log-log bound.",
+    "summary": "Lean requires the threshold b₀ to be at least 2, whereas the paper does not state that restriction. This is equivalent for the asymptotic claim because the threshold can be increased.",
     "paper_quote": "There are absolute constants $c_1,c_2>0$ and $b_0$ such that, for every\ninteger $b\\ge b_0$,",
-    "lean_quote": "∃ c₁ c₂ : ℝ, 0 < c₁ ∧ 0 < c₂ ∧ ∃ b₀ : ℕ, 2 ≤ b₀ ∧\n      ∀ b : ℕ, b₀ ≤ b →"
+    "lean_quote": "∃ b₀ : ℕ, 2 ≤ b₀ ∧"
    }
   ],
   "rejected": []
@@ -36,23 +36,23 @@ window.AUDIT = {
    "flags": [
     {
      "severity": "note",
-     "summary": "The Lean theorem requires both bounds for every b ≥ 2, whereas the paper requires them only for b ≥ b₀. This is stronger, not weaker; moreover, the Lean upper bound at b = 2 is impossible because log(log 2) < 0 while maxMinLength is nonnegative. The stronger range does not prevent the Lean statement from implying the paper’s eventual bound, but it makes the Lean statement unprovable as written.",
-     "paper_quote": "for every\ninteger\nb\\ge b_0,",
-     "lean_quote": "∀ b : ℕ, 2 ≤ b →\nc₁ * Real.log (Real.log (b : ℝ)) ≤ (maxMinLength b : ℝ) ∧\n(maxMinLength b : ℝ) ≤ c₂ * Real.log (Real.log (b : ℝ))"
+     "summary": "The Lean bounds apply to every b ≥ 2; the existential b₀ is not used to restrict their domain. This is stronger than the paper’s eventual bound, so it would imply that bound, but the added range makes the Lean statement false at b = 2: log(log 2) is negative while maxMinLength is nonnegative.",
+     "paper_quote": "for every\ninteger $b\\ge b_0$",
+     "lean_quote": "∃ b₀ : ℕ, 2 ≤ b₀ ∧\n      ∀ b : ℕ, 2 ≤ b →\n        c₁ * Real.log (Real.log (b : ℝ)) ≤ (maxMinLength b : ℝ) ∧\n        (maxMinLength b : ℝ) ≤ c₂ * Real.log (Real.log (b : ℝ))"
+    },
+    {
+     "severity": "note",
+     "summary": "The Lean statement adds expansion existence as a conjunct. That fact is stated in the paper’s surrounding text, but is not part of the theorem environment being audited.",
+     "paper_quote": "The greedy algorithm shows that such expansions exist.",
+     "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns) ∧"
     }
    ],
    "rejected": [
     {
      "severity": "note",
-     "summary": "The Lean statement adds an existence-of-expansions conjunct. The paper states this separately before the theorem, and Lean’s sInf definition gives the intended least length once the conjunct ensures the set of expansion lengths is nonempty for the relevant a,b. The Finset supremum agrees with the paper’s maximum when b ≥ 2, when the index set is nonempty.",
-     "paper_quote": "The greedy algorithm shows that such\nexpansions exist.\n\nFor integers\n$1\\le a<b$, let $N(a,b)$ be the least $k$ for which\n\\[\n \\frac ab=\\frac1{n_1}+\\cdots+\\frac1{n_k},\n \\qquad 2\\le n_1<\\cdots<n_k,\\qquad n_i\\in\\Z,\n\\]\nand put $N(b)=\\max_{1\\le a<b}N(a,b).",
-     "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns) ∧\n\nnoncomputable def minLength (a b : ℕ) : ℕ :=\nsInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n(Finset.Ico 1 b).sup (fun a => minLength a b)"
-    },
-    {
-     "severity": "note",
-     "summary": "The expansion encoding is equivalent on the theorem’s domain: pairwise strict ordering on the list gives the ordered distinct denominators, each denominator is at least 2, and the rational sum matches a/b. Using ℕ instead of ℤ for denominators makes no difference under that lower bound. Also, the paper’s per-numerator upper-bound sentence follows from the Lean maximum bound for b ≥ 2, since each eligible numerator is in the supremum’s index set.",
-     "paper_quote": "\\qquad 2\\le n_1<\\cdots<n_k,\\qquad n_i\\in\\Z,",
-     "lean_quote": "ns.Pairwise (· < ·) ∧ (∀ n ∈ ns, 2 ≤ n) ∧\n    (ns.map (fun n => (1 : ℚ) / (n : ℚ))).sum = (a : ℚ) / (b : ℚ)\n\nIn particular, the upper bound holds for every integer numerator\n$1\\le a<b$."
+     "summary": "The definitions totalize minLength and maxMinLength outside the paper’s stated domains: sInf over no expansions and a supremum over an empty interval have natural-number defaults. On the theorem’s valid inputs, the added existence conjunct ensures the minimum is over a nonempty set, and b ≥ 2 makes the interval nonempty. The finite supremum over 1 ≤ a < b represents the paper’s maximum; its upper bound also gives the stated per-numerator upper bound.",
+     "paper_quote": "let $N(a,b)$ be the least $k$ for which",
+     "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
     }
    ]
   },
@@ -64,24 +64,25 @@ window.AUDIT = {
    "flags": [
     {
      "severity": "mismatch",
-     "summary": "The paper requires the bounds for every integer b above the threshold; the Lean statement requires them only for one b. Thus it does not establish the claimed asymptotic bounds or the stated upper bound for every numerator.",
-     "paper_quote": "for every\ninteger\nb\\ge b_0,\n\\[\n c_1\\log\\log b\\le N(b)\\le c_2\\log\\log b.\n\\]",
+     "summary": "The Lean statement gives both inequalities for only one existentially chosen b. The paper requires them for every integer b ≥ b₀; consequently the Lean statement also does not establish the stated upper bound for every numerator.",
+     "paper_quote": "for every\ninteger b\\ge b_0,\n\\[\n c_1\\log\\log b\\le N(b)\\le c_2\\log\\log b.\n\\]\nIn particular, the upper bound holds for every integer numerator\n$1\\le a<b$.",
      "lean_quote": "∃ b : ℕ, b₀ ≤ b ∧\n        c₁ * Real.log (Real.log (b : ℝ)) ≤ (maxMinLength b : ℝ) ∧\n        (maxMinLength b : ℝ) ≤ c₂ * Real.log (Real.log (b : ℝ))"
     },
     {
      "severity": "note",
-     "summary": "The Lean theorem adds existence of an expansion for every valid numerator and denominator. The paper states this before the theorem as a consequence of the greedy algorithm, not as part of the theorem claim.",
-     "paper_quote": "The greedy algorithm shows that such expansions exist.",
+     "summary": "The Lean statement adds universal existence of expansions as a conjunct. This is stated in the paper’s preceding text, outside the theorem environment.",
+     "paper_quote": "The greedy algorithm shows that such\nexpansions exist.",
      "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns) ∧"
-    },
-    {
-     "severity": "note",
-     "summary": "The definitions encode the paper’s minimum and maximum using natural-number sInf and Finset.sup. On the relevant domain, the added existence conjunct ensures the minimum is over a nonempty set, and b ≥ 2 makes the numerator range nonempty; these definitions therefore match the paper’s quantities there. Requiring b₀ ≥ 2 is harmless because the paper’s threshold can be increased.",
-     "paper_quote": "and put $N(b)=\\max_{1\\le a<b}N(a,b)$.",
-     "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
     }
    ],
-   "rejected": []
+   "rejected": [
+    {
+     "severity": "note",
+     "summary": "The definitions totalize edge cases: `sInf` gives a value even when no expansion exists, and the empty finite supremum also has a value. On the intended domain b ≥ 2 and 1 ≤ a < b, the expansion-existence conjunct ensures the minimum is over a nonempty set, and the finite supremum ranges over the paper’s numerators.",
+     "paper_quote": "let N(b) be the maximum of N(a,b) over 1\\le a<b.",
+     "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
+    }
+   ]
   },
   {
    "id": "log_upper",
@@ -91,20 +92,20 @@ window.AUDIT = {
    "flags": [
     {
      "severity": "mismatch",
-     "summary": "The Lean upper bound is only proportional to log b, not log log b. It therefore does not establish the paper’s upper bound for N(b), nor the stated log-log upper bound for each numerator.",
+     "summary": "The Lean upper bound is only O(log b), not the paper’s O(log log b), so it does not establish the stated upper bound.",
      "paper_quote": "c_1\\log\\log b\\le N(b)\\le c_2\\log\\log b.",
      "lean_quote": "(maxMinLength b : ℝ) ≤ c₂ * Real.log (b : ℝ)"
     },
     {
      "severity": "note",
-     "summary": "The expansion-existence conjunct is additional to the theorem’s claim. The paper states this fact before the theorem; in Lean it also ensures minLength’s sInf is taken over a nonempty set for the relevant numerators.",
+     "summary": "The Lean theorem adds an existence conjunct. The paper mentions this fact before the theorem, but it is not part of the theorem environment being audited.",
      "paper_quote": "The greedy algorithm shows that such expansions exist.",
      "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns)"
     },
     {
      "severity": "note",
-     "summary": "The definitions encode the paper’s least length and maximum over 1 ≤ a < b using natural-number sInf and Finset.sup. These operators are totalized, but their empty-set cases do not affect the theorem’s domain: existence supplies expansion witnesses, and b₀ ≥ 2 makes the numerator range nonempty.",
-     "paper_quote": "let N(a,b) be the least k for which\n\\[\n \\frac ab=\\frac1{n_1}+\\cdots+\\frac1{n_k},\n \\qquad 2\\le n_1<\\cdots<n_k,\\qquad n_i\\in\\Z,\n\\]\nand put N(b)=\\max_{1\\le a<b}N(a,b).",
+     "summary": "The Lean functions are totalized over all naturals, whereas the paper defines these quantities only on the stated ranges. On the theorem’s domain, the infimum and finite supremum encode the least length and maximum; outside it, the definitions still return values (including 0 for empty sets).",
+     "paper_quote": "For integers\n$1\\le a<b$, let $N(a,b)$ be the least $k$",
      "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
     }
    ],
@@ -118,27 +119,21 @@ window.AUDIT = {
    "flags": [
     {
      "severity": "mismatch",
-     "summary": "The Lean theorem asserts only the upper bound. It has no lower-bound inequality relating a positive constant to maxMinLength, so proving it would not establish the paper’s two-sided estimate; c₁ is otherwise unused.",
+     "summary": "The Lean statement omits the theorem’s lower bound; the positive existential for c₁ is unused, so the Lean upper bound alone does not establish the claimed two-sided estimate.",
      "paper_quote": "c_1\\log\\log b\\le N(b)\\le c_2\\log\\log b.",
      "lean_quote": "(maxMinLength b : ℝ) ≤ c₂ * Real.log (Real.log (b : ℝ))"
     },
     {
      "severity": "note",
-     "summary": "The Lean theorem adds an existence conjunct for expansions. This is not part of the theorem environment, though the paper states the fact immediately before it.",
+     "summary": "The Lean statement adds expansion existence for every positive proper fraction. This is outside the theorem environment, though the paper states it in the preceding text.",
      "paper_quote": "The greedy algorithm shows that such expansions exist.",
      "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns)"
     },
     {
      "severity": "note",
-     "summary": "On the relevant domain, the definitions encode the paper’s objects: Pairwise (<) gives strictly increasing denominators, and the rational sum gives the expansion equality; minLength takes the least attainable length, and the finite supremum ranges over numerators 1 through b−1. The definitions are totalized outside that domain: in particular, sInf of an empty set of naturals and the supremum over an empty finset are 0. The added existence conjunct ensures the minimum is attained for relevant a,b, and b₀ ≥ 2 makes the numerator range nonempty.",
-     "paper_quote": "let $N(a,b)$ be the least $k$ for which",
-     "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
-    },
-    {
-     "severity": "note",
-     "summary": "The Lean upper bound on the maximum over all numerators also yields the paper’s individual-numerator upper bound on the theorem’s domain; it need not state that consequence separately.",
-     "paper_quote": "In particular, the upper bound holds for every integer numerator\n$1\\le a<b$.",
-     "lean_quote": "(maxMinLength b : ℝ) ≤ c₂ * Real.log (Real.log (b : ℝ))"
+     "summary": "minLength is defined by a natural-number sInf, so it is totalized (with value 0 when the set is empty), unlike the paper’s least-length definition on 1 ≤ a < b. The added existence conjunct ensures the relevant sets are nonempty on the theorem’s domain.",
+     "paper_quote": "let N(a,b) be the least k for which",
+     "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}"
     }
    ],
    "rejected": []
@@ -151,27 +146,21 @@ window.AUDIT = {
    "flags": [
     {
      "severity": "note",
-     "summary": "The Lean theorem adds an existence conjunct for expansions of every valid fraction. This is stated in the paper’s surrounding text, not in the theorem, and is extra to the claim under audit.",
-     "paper_quote": "The greedy algorithm shows that such expansions exist.",
-     "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns) ∧"
-    },
-    {
-     "severity": "note",
-     "summary": "Lean requires denominators to be at least 1 rather than at least 2. On the stated domain, a denominator of 1 would contribute 1 to a sum equal to a/b<1, so this difference does not change which expansions qualify.",
+     "summary": "Lean permits denominator 1, unlike the paper’s stated denominator bound. On the theorem’s domain, an expansion containing 1 would sum to at least 1, whereas a/b<1, so this does not change the expansions being counted.",
      "paper_quote": "2\\le n_1<\\cdots<n_k",
      "lean_quote": "(∀ n ∈ ns, 1 ≤ n)"
     },
     {
      "severity": "note",
-     "summary": "The definitions totalize the least length and maximum using sInf and Finset.sup. An empty set of expansion lengths gives 0 in ℕ, but the added existence conjunct ensures nonempty sets for valid fractions; for b≥2, the numerator finset is nonempty and its supremum is the stated maximum.",
-     "paper_quote": "let N(a,b) be the least k",
-     "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
+     "summary": "The Lean theorem adds an existence-of-expansion conjunct beyond the theorem environment. The paper states this separately before the theorem, rather than including it in the theorem’s claim.",
+     "paper_quote": "The greedy algorithm shows that such expansions exist.",
+     "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns)"
     },
     {
      "severity": "note",
-     "summary": "Lean indexes b and chooses b₀ in ℕ, with b₀≥2; the paper phrases the range as integers. This is equivalent for the sufficiently large positive b in the theorem.",
-     "paper_quote": "for every\ninteger $b\\ge b_0$",
-     "lean_quote": "∃ b₀ : ℕ, 2 ≤ b₀ ∧\n      ∀ b : ℕ, b₀ ≤ b →"
+     "summary": "The Lean definitions are totalized: minLength uses sInf even when no expansion exists, and maxMinLength uses a finite supremum even when the range is empty. These cases do not affect the theorem’s domain, where existence is asserted and b≥b₀≥2 makes the numerator range nonempty.",
+     "paper_quote": "and put $N(b)=\\max_{1\\le a<b}N(a,b)$.",
+     "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
     }
    ],
    "rejected": []
@@ -184,27 +173,21 @@ window.AUDIT = {
    "flags": [
     {
      "severity": "mismatch",
-     "summary": "Lean allows repeated denominators, while the paper requires them to be distinct. Thus Lean bounds the maximum minimum length for a larger class of expansions. Its lower bound for this relaxed minimum would imply the paper’s lower bound, but its upper bound would not imply the paper’s upper bound.",
+     "summary": "Lean permits repeated denominators: `Pairwise (· ≤ ·)` requires only nondecreasing order, whereas the paper requires strictly increasing denominators. Thus Lean’s minimum lengths can be smaller, and its lower bound does not establish the paper’s lower bound for distinct-denominator expansions.",
      "paper_quote": "2\\le n_1<\\cdots<n_k",
      "lean_quote": "ns.Pairwise (· ≤ ·)"
     },
     {
      "severity": "note",
-     "summary": "The Lean theorem has an extra existence conjunct. The paper mentions existence before the theorem, but Lean’s conjunct uses the relaxed IsExpansion definition, so it does not assert existence of expansions with distinct denominators.",
+     "summary": "The Lean theorem adds an existence conjunct. It concerns Lean’s `IsExpansion` notion and asserts existence for every positive proper fraction; the paper’s theorem environment does not include this conjunct (though existence is stated in the surrounding text).",
      "paper_quote": "The greedy algorithm shows that such expansions exist.",
      "lean_quote": "(∀ a b : ℕ, 1 ≤ a → a < b → ∃ ns : List ℕ, IsExpansion a b ns)"
     },
     {
      "severity": "note",
-     "summary": "The natural-number sInf and finite-set sup are totalized (zero on empty inputs). On the relevant domain, the existence conjunct makes the length set nonempty, and b₀ ≥ 2 makes the numerator range nonempty; the finite sup is the maximum over 1 ≤ a < b.",
-     "paper_quote": "and put $N(b)=\\max_{1\\le a<b}N(a,b)$.",
+     "summary": "The definitions are totalized: `sInf` supplies a value even if no expansion exists, and finite `sup` supplies a value for an empty index set. On the theorem’s range, `b ≥ b₀ ≥ 2` makes the numerator index set nonempty, and the added existence conjunct makes the Lean expansion sets nonempty for those numerators. The `Ico 1 b` range otherwise matches `1 ≤ a < b`.",
+     "paper_quote": "let N(a,b) be the least k",
      "lean_quote": "noncomputable def minLength (a b : ℕ) : ℕ :=\n  sInf {k : ℕ | ∃ ns : List ℕ, IsExpansion a b ns ∧ ns.length = k}\n\nnoncomputable def maxMinLength (b : ℕ) : ℕ :=\n  (Finset.Ico 1 b).sup (fun a => minLength a b)"
-    },
-    {
-     "severity": "note",
-     "summary": "The paper uses integers for a, b, and the denominators; Lean uses naturals. On the stated ranges (in particular, denominators at least 2 and b ≥ b₀ ≥ 2), this is an equivalent representation. Likewise, Lean’s natural-number coercion into ℝ supplies the real argument to log.",
-     "paper_quote": "For integers $1\\le a<b$",
-     "lean_quote": "∀ a b : ℕ, 1 ≤ a → a < b"
     }
    ],
    "rejected": []
@@ -212,5 +195,5 @@ window.AUDIT = {
  ],
  "model": "default",
  "provider": "agent37",
- "seconds": 35.1
+ "seconds": 27.7
 };

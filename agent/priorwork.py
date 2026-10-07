@@ -64,3 +64,40 @@ def search(query, api_key, cited_titles, limit=8, transport=_http):
                      "author": item.get("author"), "year": (item.get("publishedDate") or "")[:4] or None,
                      "cited_by_paper": bool(key) and any(key in c or c in key for c in cited if c)})
     return {"query": query, "provider": "monid/exa", "hits": hits}
+
+
+RELEVANCE = ("should_cite", "background", "unrelated")
+
+ASSESS_PROMPT = """A machine-written mathematics paper does not cite the works listed below, which a search
+returned as related. Judging only from each title (and author and year where given), say how
+it relates to the paper. Do not use tools. Reply with JSON only:
+{{"items": [{{"index": <number from the list>, "relevance": "should_cite" | "background" | "unrelated",
+            "reason": "<one plain sentence>"}}]}}
+"should_cite": it appears to address the same question or a result the paper builds on or
+improves. "background": same area, not the same question. "unrelated": different topic.
+You have not read these works; say so in the reason if the title alone is not enough.
+
+The paper: {query}
+
+Uncited works:
+{listing}"""
+
+
+def assess(prior, model):
+    """Ask a model which uncited hits look like they should have been cited. Returns a new result dict."""
+    uncited = [i for i, hit in enumerate(prior["hits"]) if not hit["cited_by_paper"]]
+    if not uncited:
+        return {**prior, "assessed": True}
+    listing = "\n".join(f"{i}. {prior['hits'][i]['title']}" + (f" ({prior['hits'][i]['author']})" if prior["hits"][i].get("author") else "")
+                        + (f", {prior['hits'][i]['year']}" if prior["hits"][i].get("year") else "") for i in uncited)
+    try:
+        data = json.loads(model(ASSESS_PROMPT.format(query=prior["query"], listing=listing)))
+    except (TypeError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"relevance assessment was not JSON: {error}") from error
+    verdicts = {}
+    for item in data.get("items", []) if isinstance(data, dict) else []:
+        if (isinstance(item, dict) and item.get("index") in uncited and item.get("relevance") in RELEVANCE
+                and isinstance(item.get("reason"), str) and item["reason"].strip()):
+            verdicts[item["index"]] = {"relevance": item["relevance"], "reason": item["reason"].strip()[:300]}
+    hits = [{**hit, **verdicts.get(i, {})} for i, hit in enumerate(prior["hits"])]
+    return {**prior, "hits": hits, "assessed": True}
