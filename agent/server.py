@@ -75,8 +75,10 @@ one picture from this library and its inputs, and the page draws it exactly:
 - "greedy": the greedy procedure on a/b, one bar per step, showing denominators exploding.
 - "none": no picture in the library fits this step.
 
-Choose the fraction a/b (integers, 1 <= a < b <= 200) that best illustrates THIS step, not a
-generic one. Reply with JSON only:
+Judge by what the STATEMENT is about, not by the technique of its proof: a statement about how
+many unit fractions are needed fits "shortest" (pick a fraction that needs many cups for its
+size); a statement about the greedy procedure fits "greedy". Use "none" only when the statement
+is about something else entirely. Choose integers 1 <= a < b <= 200 that illustrate THIS step. Reply with JSON only:
 {{"picture": "shortest" | "greedy" | "none", "a": <int>, "b": <int>, "caption": "<one or two plain sentences: what to notice, and how it relates to this step>"}}
 For "none", set a and b to 1 and 2 and use the caption to say why no picture fits.
 
