@@ -29,8 +29,11 @@ Given a paper's LaTeX and its Lean statement, the agent:
 5. Scores itself by planting known defects in the statement and counting what it catches
    (latest runs: 4 of 4 defects caught, 3 of 3 controls left alone; a seven-case smoke test,
    and results vary between runs).
-6. Publishes a summary card and a review copilot: a guided path through the proof with the
-   agent's notes, an interactive picture of the theorem, and progress ticks beside each step.
+6. Publishes a summary card and a review copilot. The copilot shows one result at a time in
+   readable form, with interactive pictures of the mathematics, a chat that answers questions
+   about the step on screen, and a button that makes the agent write a test script and run it
+   in its Agent37 cloud sandbox (for the greedy lemma: 1,740 cases, 0 failures; we re-ran the
+   agent's script locally and got the same output).
 
 The reviewer keeps the judgement: the card shows what was checked, by what, and what is left.
 One paper takes about a minute. Buyers: labs publishing machine-proved results, journals
@@ -43,12 +46,15 @@ ______
 https://github.com/Elmdin/OpenMath
 
 **Describe your Agent37 Cloud API integration and any OpenAI, Supabase, InstaCloud, or Monid integrations**
-- Agent37 Cloud API: the worker. We create a hosted Hermes instance through
-  `POST /v1/instances`, wait on `/v1/health`, and run every audit turn (26 per paper:
-  7 for the audit and its self-evaluation, 19 for the per-result reviewer's notes) through `POST /v1/responses` on the instance. Code:
-  `agent/agent37.py`. A full run completes in about a minute.
+- Agent37 Cloud API: the worker, used four ways. We create a hosted Hermes instance through
+  `POST /v1/instances`, wait on `/v1/health`, and call `POST /v1/responses` on it for: (1) the
+  statement audit and its self-evaluation, 7 turns per paper; (2) a reviewer's note for each of
+  the 19 results; (3) the live copilot chat, with the step on screen as context; (4) experiments,
+  where the agent writes a Python test and runs it in its own cloud sandbox. Code:
+  `agent/agent37.py`, `agent/notes.py`, `agent/server.py`.
 - Supabase: every finished card, with its audit, self-evaluation and prior-work results, is
-  inserted into a `papers` table through the REST API. Code: `agent/publish.py`, `supabase/schema.sql`.
+  inserted into a `papers` table through the REST API, and the summary page reads the latest
+  rows back as a feed. Code: `agent/publish.py`, `supabase/schema.sql`.
 - Monid: prior-work search. The agent calls Monid's `/v1/run` (routed to Exa) with a query
   built from the paper's title and abstract, then cross-checks the hits against the paper's
   bibliography. Code: `agent/priorwork.py`.
