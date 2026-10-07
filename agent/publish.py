@@ -71,7 +71,8 @@ def latest(limit: int = 10, env: Mapping[str, str] | None = None,
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= MAX_LIMIT:
         raise ValueError(f"limit must be an integer between 1 and {MAX_LIMIT}")
     url, headers = _config(env)
-    query = f"?select=id,created_at,title&order=created_at.desc&limit={limit}"
+    # Only rows this pipeline wrote (they carry a review card); the table may hold other rows.
+    query = f"?select=id,created_at,title&spec->card=not.is.null&order=created_at.desc&limit={limit}"
     rows = (transport or _urllib_transport)("GET", url + query, headers, None)
     if not isinstance(rows, list):
         raise RuntimeError("Supabase feed response was not a list")

@@ -50,7 +50,7 @@ def test_latest_builds_feed_query():
     method, url, headers, body = transport.calls[0]
     assert method == "GET" and body is None
     assert url == ("https://example.supabase.co/rest/v1/papers"
-                   "?select=id,created_at,title&order=created_at.desc&limit=5")
+                   "?select=id,created_at,title&spec->card=not.is.null&order=created_at.desc&limit=5")
     assert headers["apikey"] == "anon-secret"
 
 
