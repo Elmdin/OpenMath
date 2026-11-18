@@ -5,8 +5,7 @@ Built at the "Build an Agent" Hackathon, Corgi Cafe, San Francisco, Oct 7, 2026.
 
 **Status: working on one paper (Family 025). One command runs the audit on Agent37, scores it, searches prior work through Monid, and publishes the card to Supabase.**
 
-**Live app, all features:** https://reliance-casino-judicial-domains.trycloudflare.com (a tunnel to the demo machine; up while that machine is on)
-**Static pages:** https://elmdin.github.io/OpenMath/ (uses the same server for chat and experiments)
+**Static pages:** https://elmdin.github.io/OpenMath/ (chat and experiments need the demo server, which is offline)
 
 ## What it does (target)
 Paper in -> briefing out, no human step:
