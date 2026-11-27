@@ -117,6 +117,18 @@ no human step, and it reports a false statement instead of proving it. Four of t
 well-known results a model may have seen; they calibrate the machinery, not the
 mathematics. The first real target is the test of that.
 
+### First real target: Erdős 282, Fibonacci variant
+
+Fibonacci's greedy Egyptian-fraction algorithm terminates for every rational in (0, 1).
+Definition and statement are copied from google-deepmind/formal-conjectures
+(`FormalConjectures/ErdosProblems/282.lean`, commit f606af1), where the theorem stood as
+`sorry`. The loop proved it in one worker iteration: 11 minutes, $0.74, 142 lines
+(`lean/Targets/Erdos282Fibonacci/Solution.lean`). `lake comparator --paranoid` accepts it,
+so every kernel bundled with Lean 4.36 agrees.
+
+Not yet done: the proof is on Lean 4.36 / Mathlib v4.36.0 and formal-conjectures is on Lean
+4.33.1, so it has not been built there, and nothing has been sent upstream.
+
 ## Layout
 
 - `prover/lean.py` compile a file, parse diagnostics; caps concurrent Lean processes
