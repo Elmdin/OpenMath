@@ -1,0 +1,13 @@
+{
+  "challenge_module": "Targets.Erdos282Fibonacci.Challenge",
+  "solution_module": "Targets.Erdos282Fibonacci.Solution",
+  "theorem_names": [
+    "Erdos282.erdos_282.variants.fibonacci"
+  ],
+  "definition_names": [],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
