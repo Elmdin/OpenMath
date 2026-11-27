@@ -105,3 +105,8 @@ def test_locks_detect_a_changed_challenge_and_loosened_axioms(tmp_path, monkeypa
     cfg["permitted_axioms"].append("sorryAx")
     t.config.write_text(json.dumps(cfg))
     assert any("permits axioms" in p for p in check_locks(t, t.lock_hashes()))
+
+
+def test_theorems_mentioned_in_comments_are_not_targets():
+    src = "/-!\n  theorem fake : P := by sorry\n-/\nnamespace A\n-- theorem also_fake : Q\ntheorem real : R := by sorry\nend A\n"
+    assert qualified_theorems(src) == ["A.real"]

@@ -101,6 +101,8 @@ class Target:
 
 def qualified_theorems(source: str) -> list[str]:
     """Fully qualified names of the theorems declared in a Lean file (namespaces applied)."""
+    from .auto import strip_comments
+    source = strip_comments(source)
     events = [(m.start(), "ns", m.group(1), m.group(2)) for m in NAMESPACE.finditer(source)]
     events += [(m.start(), "thm", "", m.group(1)) for m in THEOREM.finditer(source)]
     stack: list[str] = []
