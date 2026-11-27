@@ -1,0 +1,13 @@
+{
+  "challenge_module": "Targets.CalGcd.Challenge",
+  "solution_module": "Targets.CalGcd.Solution",
+  "theorem_names": [
+    "imo1959_p1"
+  ],
+  "definition_names": [],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

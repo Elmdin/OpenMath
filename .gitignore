@@ -5,3 +5,9 @@ dist/
 .next/
 __pycache__/
 .pytest_cache/
+
+# Lean build output and per-run scratch
+lean/.lake/
+lean/Targets/*/Scratch*.lean
+lean/Targets/*/.auto_*
+lean/Targets/JudgeSelfTest/
