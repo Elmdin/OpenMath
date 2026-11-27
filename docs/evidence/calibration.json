@@ -1,0 +1,17 @@
+{
+ "lean": "4.36.0",
+ "mathlib": "v4.36.0",
+ "results": {
+  "CalGcd": {
+   "theorems": [
+    "imo1959_p1"
+   ],
+   "expected": "proved",
+   "outcome": "proved",
+   "as_expected": true,
+   "iterations": 1,
+   "minutes": 1.8,
+   "cost_usd": 0.34
+  }
+ }
+}
