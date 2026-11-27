@@ -1,0 +1,127 @@
+{
+ "lean": "4.36.0",
+ "mathlib": "v4.36.0",
+ "all_correct": true,
+ "cases": [
+  {
+   "case": "changed_definition",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": false,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Const does not match between challenge and target 'Smoke.tri'"
+   ],
+   "seconds": 36
+  },
+  {
+   "case": "helper_with_sorry",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": true,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Illegal axiom detected: 'sorryAx'"
+   ],
+   "seconds": 34
+  },
+  {
+   "case": "honest",
+   "should_be_accepted": true,
+   "compiles_without_error": true,
+   "caught_by_source_lint": false,
+   "comparator_accepted": true,
+   "correct": true,
+   "comparator_says": [
+    "Your solution is okay!"
+   ],
+   "seconds": 40
+  },
+  {
+   "case": "native_decide",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": true,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Illegal axiom detected: 'Smoke.tri_formula._native.native_decide.ax_1_1'"
+   ],
+   "seconds": 35
+  },
+  {
+   "case": "new_axiom",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": true,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Illegal axiom detected: 'Smoke.tri_fact'"
+   ],
+   "seconds": 33
+  },
+  {
+   "case": "shadowed_instance",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": false,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Challenge and solution theorem statement do not match: 'Smoke.tri_formula'"
+   ],
+   "seconds": 32
+  },
+  {
+   "case": "sorry",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": true,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Illegal axiom detected: 'sorryAx'"
+   ],
+   "seconds": 31
+  },
+  {
+   "case": "unchecked_declaration",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": false,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Lean default exited with 1"
+   ],
+   "seconds": 32
+  },
+  {
+   "case": "weaker_statement",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": false,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Challenge and solution theorem statement do not match: 'Smoke.tri_formula'"
+   ],
+   "seconds": 33
+  },
+  {
+   "case": "wrong_name",
+   "should_be_accepted": false,
+   "compiles_without_error": true,
+   "caught_by_source_lint": false,
+   "comparator_accepted": false,
+   "correct": true,
+   "comparator_says": [
+    "error: Child exited with 134"
+   ],
+   "seconds": 31
+  }
+ ]
+}

@@ -74,21 +74,47 @@ suspiciously quick proof as a sign the statement is wrong.
 
 ### The judge rejects cheats
 
-`python3 -m prover.selftest` judges eleven "proofs" of one small theorem: one honest, ten
+`python3 -m prover.selftest` judges ten "proofs" of one small theorem: one honest, nine
 cheating in different ways. Results are in `docs/evidence/judge-selftest.json`.
 
-(run in progress; table follows in the next commit)
+| Case | Compiles cleanly | Caught by source lint | Comparator | What the comparator said |
+|---|---|---|---|---|
+| honest proof | yes | n/a | **accepted** | "Your solution is okay!" |
+| `sorry` | yes | yes | rejected | illegal axiom `sorryAx` |
+| helper lemma with `sorry` | yes | yes | rejected | illegal axiom `sorryAx` |
+| new `axiom` | yes | yes | rejected | illegal axiom `Smoke.tri_fact` |
+| `native_decide` | yes | yes | rejected | illegal axiom `…native_decide.ax_1_1` |
+| weaker statement (extra hypothesis) | yes | no | rejected | statement does not match |
+| changed definition underneath | yes | no | rejected | constant `Smoke.tri` does not match |
+| local instance that redefines `*` before the statement (source text identical, proof is `rfl`) | yes | no | rejected | statement does not match |
+| theorem proved under another name | yes | no | rejected | export aborted: theorem not found |
+| declaration added to the environment without a kernel check (`#print axioms` reports it clean) | yes | no | rejected | kernel rejected it on replay |
+
+10 of 10 calls correct. Every cheat compiles without an error, and five get past the source
+lint; the comparator catches all nine on its own. The last row is the one to remember:
+compiling plus `#print axioms` is not a proof check.
 
 ### The loop proves things unattended
 
 `python3 -m prover.bench` runs the whole loop on five statements with nobody in between.
 Results are in `docs/evidence/calibration.json`; the proofs are in `lean/Targets/Cal*/`.
 
-(run in progress; table follows in the next commit)
+| Target | Statement | Outcome | Worker iterations | Wall time | Cost |
+|---|---|---|---|---|---|
+| `CalGcd` | IMO 1959 P1: gcd(21n+4, 14n+3) = 1 | proved | 1 | 1.8 min | $0.34 |
+| `CalPow` | IMO 1964 P1(b): 7 never divides 2^n + 1 | proved | 1 | 1.7 min | $0.30 |
+| `CalNesbitt` | Nesbitt's inequality | proved | 1 | 2.2 min | $0.33 |
+| `CalFibSubsets` | subsets of {0..n-1} with no two consecutive members number fib(n+2) (written for this run) | proved, 101 lines, two helper lemmas | 1 | 2.3 min | $0.47 |
+| `CalFalse` | n² + n + 41 is always prime (false on purpose) | refuted at n = 40, not proved | 1 | 1.3 min | $0.31 |
+
+5 of 5 as expected, $1.75 in total. Limits of this evidence: every target fell in the first
+iteration, so the carry-over between iterations (notes, portfolio sweep, stall stop) has
+unit tests but has not yet been needed in a real run. A refutation is compiled and checked
+for holes, but whether it negates the right statement is left to a person.
 
 What this does and does not show: the loop turns a statement into a judge-accepted proof with
 no human step, and it reports a false statement instead of proving it. Four of the five are
-well-known problems a model may have seen; they calibrate the machinery, not the
+well-known results a model may have seen; they calibrate the machinery, not the
 mathematics. The first real target is the test of that.
 
 ## Layout

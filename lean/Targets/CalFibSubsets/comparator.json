@@ -1,0 +1,13 @@
+{
+  "challenge_module": "Targets.CalFibSubsets.Challenge",
+  "solution_module": "Targets.CalFibSubsets.Solution",
+  "theorem_names": [
+    "CalFibSubsets.card_sparse"
+  ],
+  "definition_names": [],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

@@ -6,10 +6,10 @@ So 2^n + 1 mod 7 is 2, 3 or 5, never 0.
 
 ## Proved so far
 `imo1964_p1b` in Solution.lean: induction for the residue fact, then `omega`.
-Status of `check`/`judge`: see bottom line.
+Checked: `prover check` reports 0 errors, 0 sorries; `prover judge CalPow` printed ACCEPTED (iteration 1).
 
 ## Dead ends
 None.
 
 ## Open holes
-None, if check passes (see status).
+None.
