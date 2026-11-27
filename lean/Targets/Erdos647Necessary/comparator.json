@@ -1,0 +1,14 @@
+{
+  "challenge_module": "Targets.Erdos647Necessary.Challenge",
+  "solution_module": "Targets.Erdos647Necessary.Solution",
+  "theorem_names": [
+    "erdos_647",
+    "Erdos647.witness_dvd"
+  ],
+  "definition_names": [],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
