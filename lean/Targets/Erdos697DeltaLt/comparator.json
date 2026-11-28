@@ -1,0 +1,14 @@
+{
+  "challenge_module": "Targets.Erdos697DeltaLt.Challenge",
+  "solution_module": "Targets.Erdos697DeltaLt.Solution",
+  "theorem_names": [
+    "Erdos697.density_exists",
+    "Erdos697.erdos_697.variants.delta_lt"
+  ],
+  "definition_names": [],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

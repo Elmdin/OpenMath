@@ -1,0 +1,13 @@
+{
+  "challenge_module": "Targets.CalPow.Challenge",
+  "solution_module": "Targets.CalPow.Solution",
+  "theorem_names": [
+    "imo1964_p1b"
+  ],
+  "definition_names": [],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}

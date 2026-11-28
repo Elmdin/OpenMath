@@ -29,12 +29,23 @@ Paper in -> briefing out, no human step:
 - `supabase/schema.sql`
 - `docs/RESEARCH.md` what we found online, what Family 025 looks like, ideas kept and dropped
 - `agent/`           proof map, exact check and card builder (`python3 -m pytest agent -q`)
+- `prover/`, `lean/`, `bench/` the Lean proving loop (see below)
 - `web/`             the card page; build data with `python -m agent.card data/family-025 web/card.js`
+
+## Prover harness (Lean 4)
+A loop that drives an AI agent to prove a locked Lean statement, judged by Lean's own
+sandboxed `lake comparator`. Design, sources and evidence: `docs/PROVER.md`.
+```
+scripts/setup-lean.sh                      # once: Lean 4.36, Mathlib cache, bubblewrap
+python3 -m prover new MyTarget stmt.lean   # statement with `sorry`; review it, commit it
+python3 -m prover loop MyTarget            # until proved, refuted, stalled or out of budget
+python3 -m prover status
+```
 
 ## Run it
 ```
 cp .env.example .env            # fill in the keys (MONID_API_KEY for the prior-work search)
-python3 -m pytest agent -q      # 144 tests
+python3 -m pytest agent prover -q   # 155 tests
 python3 -m agent.run data/family-025 "Family 025: Short Egyptian fractions" agent37   # or: openai
 python3 -m agent.server         # then open http://127.0.0.1:8765 (summary card, review copilot, chat)
 ```

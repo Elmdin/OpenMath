@@ -1,0 +1,13 @@
+{
+  "challenge_module": "Targets.CalNesbitt.Challenge",
+  "solution_module": "Targets.CalNesbitt.Solution",
+  "theorem_names": [
+    "nesbitt"
+  ],
+  "definition_names": [],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound",
+    "Classical.choice"
+  ]
+}
